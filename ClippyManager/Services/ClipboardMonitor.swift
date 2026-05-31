@@ -1,15 +1,38 @@
 import AppKit
 
 final class ClipboardMonitor {
+
+    // Notifica postata da HistoryPanelView prima di scrivere nel pasteboard,
+    // così il monitor non rileva i propri copy come nuovi item
+    static let appDidCopy = Notification.Name("ClipboardMonitor.appDidCopy")
+
     private let storageManager: StorageManager
     private let classifier = ContentClassifier()
     private let sourceTracker = SourceAppTracker()
     private var timer: Timer?
     private var lastChangeCount: Int
+    private var suppressUntil: Date = .distantPast
 
     init(storageManager: StorageManager) {
         self.storageManager = storageManager
         self.lastChangeCount = NSPasteboard.general.changeCount
+
+        // Quando l'app copia nel pasteboard (click su un item),
+        // sopprimi il prossimo ciclo di monitoraggio per evitare
+        // il loop: click → pasteboard change → SwiftData save →
+        // @Query reload → SwiftUI re-render → hit-test rotto
+        NotificationCenter.default.addObserver(
+            forName: Self.appDidCopy,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.suppressUntil = Date().addingTimeInterval(1.5)
+            // Aggiorna il contatore subito così il monitor non rileva
+            // il cambio quando riprende
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.lastChangeCount = NSPasteboard.general.changeCount
+            }
+        }
     }
 
     func start() {
@@ -28,16 +51,21 @@ final class ClipboardMonitor {
     // MARK: - Private
 
     private func poll() {
+        // Durante la soppressione aggiorna solo il contatore, non processare
+        guard Date() >= suppressUntil else {
+            lastChangeCount = NSPasteboard.general.changeCount
+            return
+        }
+
         let board = NSPasteboard.general
         let count = board.changeCount
         guard count != lastChangeCount else { return }
         lastChangeCount = count
 
-        // Capture the source app ASAP after detecting the change
         sourceTracker.capture()
         let (appName, bundleID) = sourceTracker.current
 
-        // 1. Text / links / code / colors
+        // 1. Testo / link / code / colori
         if let text = board.string(forType: .string), !text.isEmpty {
             let type = classifier.classify(text: text)
             let item = ClipItem(
@@ -52,7 +80,7 @@ final class ClipboardMonitor {
             return
         }
 
-        // 2. Image
+        // 2. Immagine
         if let image = NSImage(pasteboard: board),
            let tiff = image.tiffRepresentation {
             let item = ClipItem(
@@ -65,7 +93,7 @@ final class ClipboardMonitor {
             return
         }
 
-        // 3. File URLs
+        // 3. File URL
         if let objects = board.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
            !objects.isEmpty {
             let paths = objects.map(\.path).joined(separator: "\n")

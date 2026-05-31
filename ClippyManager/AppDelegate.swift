@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var storageManager: StorageManager!
     private var clipboardMonitor: ClipboardMonitor!
     private var hotKeyManager: HotKeyManager!
+    private var eventMonitor: Any?  // monitora click fuori dal popover
 
     // MARK: - Lifecycle
 
@@ -23,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         clipboardMonitor?.stop()
         hotKeyManager?.unregister()
+        removeEventMonitor()
     }
 
     // MARK: - Setup
@@ -49,7 +51,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupPopover() {
         popover = NSPopover()
         popover.contentSize = NSSize(width: 360, height: 520)
-        popover.behavior = .semitransient
+        // applicationDefined: gestiamo noi apertura/chiusura — più controllo
+        // di semitransient che perde il focus silenziosamente
+        popover.behavior = .applicationDefined
         popover.animates = true
 
         let rootView = HistoryPanelView()
@@ -66,9 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupHotKey() {
         hotKeyManager = HotKeyManager { [weak self] in
-            DispatchQueue.main.async {
-                self?.togglePopover(nil)
-            }
+            DispatchQueue.main.async { self?.togglePopover(nil) }
         }
         hotKeyManager.register()
     }
@@ -77,14 +79,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func togglePopover(_ sender: Any?) {
         if popover.isShown {
-            popover.performClose(sender)
+            closePopover()
         } else {
-            guard let button = statusItem.button else { return }
-            // Activate the app first — senza questo il popover si apre ma
-            // non riceve click dopo che l'utente ha usato un'altra app
-            NSApp.activate(ignoringOtherApps: true)
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
+            openPopover()
+        }
+    }
+
+    private func openPopover() {
+        guard let button = statusItem.button else { return }
+
+        // Attiva l'app prima di mostrare il popover
+        NSApp.activate(ignoringOtherApps: true)
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+
+        // La window del popover non è pronta immediatamente dopo show():
+        // asyncAfter dà il tempo al run loop di completare il setup
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.popover.contentViewController?.view.window?.makeKey()
+        }
+
+        // Monitor click fuori dal popover → chiudi
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            self?.closePopover()
+        }
+    }
+
+    private func closePopover() {
+        popover.performClose(nil)
+        removeEventMonitor()
+    }
+
+    private func removeEventMonitor() {
+        if let m = eventMonitor {
+            NSEvent.removeMonitor(m)
+            eventMonitor = nil
         }
     }
 }

@@ -135,6 +135,10 @@ struct HistoryPanelView: View {
     // MARK: - Actions
 
     private func copyToClipboard(_ item: ClipItem) {
+        // Avvisa il monitor PRIMA di scrivere nel pasteboard,
+        // così non rileva questo copy come un nuovo item esterno
+        NotificationCenter.default.post(name: ClipboardMonitor.appDidCopy, object: nil)
+
         let pb = NSPasteboard.general
         pb.clearContents()
         if let text = item.textContent {
