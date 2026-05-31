@@ -9,24 +9,59 @@ struct ClipRowView: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            sourceIcon
-                .frame(width: 20, height: 20)
+        ZStack(alignment: .trailing) {
+            // Hover background
+            Color.primary.opacity(isHovered ? 0.05 : 0)
 
-            typeIcon
+            // Full-row tap button
+            Button(action: onCopy) {
+                HStack(spacing: 10) {
+                    sourceIcon
+                        .frame(width: 20, height: 20)
 
-            content
+                    typeIcon
 
-            Spacer()
+                    content
 
-            trailingAccessory
+                    Spacer()
+
+                    if item.type == .color,
+                       let hex = item.colorHex,
+                       let color = Color(hex: hex) {
+                        colorSwatch(color)
+                    }
+
+                    // Age — nascosto durante hover (sostituito dal pin)
+                    Text(item.createdAt.relativeShort)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.quaternary)
+                        .frame(minWidth: 24, alignment: .trailing)
+                        .opacity(isHovered ? 0 : 1)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            // Pin button — overlay separato, cattura solo il suo click
+            if isHovered {
+                Button { togglePin() } label: {
+                    Image(systemName: item.isPinned ? "pin.slash" : "pin")
+                        .font(.system(size: 12))
+                        .foregroundStyle(
+                            item.isPinned
+                                ? Color(red: 0.08, green: 0.72, blue: 0.66)
+                                : .secondary
+                        )
+                        .frame(width: 24, alignment: .center)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 12)
+                .help(item.isPinned ? "Unpin" : "Pin to top")
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .contentShape(Rectangle())
-        .background(isHovered ? Color.primary.opacity(0.05) : .clear)
         .onHover { isHovered = $0 }
-        .onTapGesture { onCopy() }
         .animation(.easeInOut(duration: 0.12), value: isHovered)
     }
 
@@ -68,22 +103,6 @@ struct ClipRowView: View {
         }
     }
 
-    @ViewBuilder
-    private var trailingAccessory: some View {
-        if item.type == .color, let hex = item.colorHex, let color = Color(hex: hex) {
-            colorSwatch(color)
-        }
-
-        if isHovered {
-            pinButton
-        } else {
-            Text(item.createdAt.relativeShort)
-                .font(.system(size: 10))
-                .foregroundStyle(.quaternary)
-                .frame(minWidth: 24, alignment: .trailing)
-        }
-    }
-
     private func colorSwatch(_ color: Color) -> some View {
         RoundedRectangle(cornerRadius: 5)
             .fill(color)
@@ -92,16 +111,6 @@ struct ClipRowView: View {
                 RoundedRectangle(cornerRadius: 5)
                     .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
             )
-    }
-
-    private var pinButton: some View {
-        Button { togglePin() } label: {
-            Image(systemName: item.isPinned ? "pin.slash" : "pin")
-                .font(.system(size: 12))
-                .foregroundStyle(item.isPinned ? Color(red: 0.08, green: 0.72, blue: 0.66) : .secondary)
-        }
-        .buttonStyle(.plain)
-        .help(item.isPinned ? "Unpin" : "Pin to top")
     }
 
     private func togglePin() {

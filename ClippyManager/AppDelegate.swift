@@ -80,6 +80,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.performClose(sender)
         } else {
             guard let button = statusItem.button else { return }
+            // Activate the app first — senza questo il popover si apre ma
+            // non riceve click dopo che l'utente ha usato un'altra app
+            NSApp.activate(ignoringOtherApps: true)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
