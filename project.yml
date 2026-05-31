@@ -1,0 +1,42 @@
+name: ClippyManager
+options:
+  bundleIdPrefix: com.giammy
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+
+settings:
+  base:
+    SWIFT_VERSION: "5"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: YES
+    COMBINE_HIDPI_IMAGES: YES
+
+targets:
+  ClippyManager:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: ClippyManager
+        excludes:
+          - "Info.plist"
+          - "ClippyManager.entitlements"
+          - "Resources/**"
+    resources:
+      - path: ClippyManager/Resources
+    entitlements:
+      path: ClippyManager/ClippyManager.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.giammy.clippymanager
+        CODE_SIGN_ENTITLEMENTS: ClippyManager/ClippyManager.entitlements
+        INFOPLIST_FILE: ClippyManager/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_APP_SANDBOX: YES
+    dependencies:
+      - sdk: Carbon.framework
