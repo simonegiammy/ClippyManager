@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var licenseManager: LicenseManager!
     private var storeManager: StoreManager!
     private var upgradeWindow: NSWindow?
+    private var settingsWindow: NSWindow?
 
     private var shelfPanel: ShelfPanel?
     private var libraryWindow: NSWindow?
@@ -42,6 +43,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         if CommandLine.arguments.contains("--open-upgrade") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openUpgrade() }
+        }
+        if CommandLine.arguments.contains("--open-settings") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openSettings() }
         }
     }
 
@@ -113,6 +117,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         ) { [weak self] _ in
             self?.notchDropZone?.position()
         }
+
+        // React to the hover toggle changed from Settings.
+        NotificationCenter.default.addObserver(
+            forName: .clippyHoverSettingChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.notchDropZone?.isHoverEnabled = self.hoverToOpenEnabled
+        }
     }
 
     // MARK: - Status item menu / click
@@ -137,13 +149,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         )
         menu.addItem(pauseItem)
 
-        let hoverItem = NSMenuItem(
-            title: "Hover to Open", action: #selector(menuToggleHover), keyEquivalent: ""
-        )
-        hoverItem.state = hoverToOpenEnabled ? .on : .off
-        menu.addItem(hoverItem)
-
         menu.addItem(.separator())
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(menuOpenSettings), keyEquivalent: ",")
+        settingsItem.keyEquivalentModifierMask = [.command]
+        menu.addItem(settingsItem)
 
         let statusLine = NSMenuItem(title: licenseManager.statusSummary, action: nil, keyEquivalent: "")
         statusLine.isEnabled = false
@@ -163,10 +172,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func menuToggleShelf() { toggleShelf() }
     @objc private func menuOpenLibrary() { openLibrary() }
     @objc private func menuTogglePause() { storageManager.isCapturePaused.toggle() }
-    @objc private func menuToggleHover() {
-        hoverToOpenEnabled.toggle()
-        notchDropZone?.isHoverEnabled = hoverToOpenEnabled
-    }
+    @objc private func menuOpenSettings() { openSettings() }
     @objc private func menuOpenUpgrade() { openUpgrade() }
 
     // MARK: - Shelf
@@ -268,12 +274,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         let win = notification.object as? NSWindow
-        guard win === libraryWindow || win === upgradeWindow else { return }
+        guard win === libraryWindow || win === upgradeWindow || win === settingsWindow else { return }
         if win === upgradeWindow { upgradeWindow = nil }
+        if win === settingsWindow { settingsWindow = nil }
         // Return to menu-bar-only mode when no managed window remains open.
-        if (libraryWindow?.isVisible != true) && (upgradeWindow?.isVisible != true) {
-            NSApp.setActivationPolicy(.accessory)
-        }
+        let anyVisible = (libraryWindow?.isVisible == true) ||
+                         (upgradeWindow?.isVisible == true) ||
+                         (settingsWindow?.isVisible == true)
+        if !anyVisible { NSApp.setActivationPolicy(.accessory) }
     }
 
     // MARK: - Upgrade / licensing window
@@ -300,6 +308,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         win.delegate = self
         win.center()
         upgradeWindow = win
+        NSApp.activate(ignoringOtherApps: true)
+        win.makeKeyAndOrderFront(nil)
+    }
+
+    // MARK: - Settings window
+
+    private func openSettings() {
+        NSApp.setActivationPolicy(.regular)
+        if let win = settingsWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            win.makeKeyAndOrderFront(nil)
+            return
+        }
+        let root = SettingsView(onOpenUpgrade: { [weak self] in self?.openUpgrade() })
+            .environment(storageManager)
+            .environment(licenseManager)
+
+        let hosting = NSHostingController(rootView: root)
+        let win = NSWindow(contentViewController: hosting)
+        win.title = "Settings"
+        win.styleMask = [.titled, .closable, .fullSizeContentView]
+        win.titlebarAppearsTransparent = true
+        win.isReleasedWhenClosed = false
+        win.appearance = NSAppearance(named: .darkAqua)
+        win.delegate = self
+        win.center()
+        settingsWindow = win
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
     }

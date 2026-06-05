@@ -45,9 +45,24 @@ A full visual library: search, filter by type or source app, organize into custo
 | ⌨️ | **⌃⌘0–9** — paste one of your last 10 clips without opening a window |
 | 🔒 | **Sensitive detection** — passwords, cards, tokens & JWTs are masked |
 | ⏸️ | **Pause capture** — stop recording with one click |
+| ⚙️ | **Settings window** — launch at login, hover toggle, history limit, update checks & more (menu-bar icon → Settings… or ⌘,) |
 | 🛡️ | **Private by design** — 100% local, no cloud, no tracking, no analytics, App Sandbox |
 
 ---
+
+## Settings
+
+Open from the menu-bar icon → **Settings…** (or `⌘,`):
+
+![Settings](docs/settings.png)
+
+- **Launch at login** (via `SMAppService`)
+- **Hover the notch to peek** on/off
+- **Pause capture** & **history limit**
+- **Keyboard shortcuts** reference
+- **Updates** — auto-check toggle + *Check for Updates*. Note: installs from the
+  **Mac App Store update automatically**, so this only matters for direct downloads.
+- **License** status + unlock, and **Clear all history**
 
 ## Licensing (dormant)
 
@@ -144,6 +159,7 @@ ClippyManager/
 │   ├── CategoryTabsView.swift   # pill tabs + type/app filter bar
 │   ├── AddCategorySheet.swift   # create a category
 │   ├── UpgradeView.swift        # trial / lifetime unlock / promo code
+│   ├── SettingsView.swift       # launch-at-login, hover, limits, updates…
 │   └── SearchBarView.swift
 └── Windows/
     ├── ShelfPanel.swift         # borderless floating panel under the notch

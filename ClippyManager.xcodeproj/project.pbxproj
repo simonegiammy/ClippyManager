@@ -33,6 +33,7 @@
 		A9EEC7601BCCC747C413DEE6 /* DropIngestor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDDB999969E106C50D9493F6 /* DropIngestor.swift */; };
 		AA2F7A9741EA9B4B9778BCE0 /* ClipItemType.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F18E84B63093D5A127E5A6 /* ClipItemType.swift */; };
 		B81F9490A6B859EC5A0A0054 /* ShelfPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58CA813BF491E22A53CDCE63 /* ShelfPanel.swift */; };
+		C9FA28B136C9525BCDA20FE6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3479A52DEAC56B3579670817 /* SettingsView.swift */; };
 		CDE6B43C3F1715D032C02B9A /* ShelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90D38E7DB7A141C7326257E /* ShelfView.swift */; };
 		D6B77D99E9F1F6AE3A09547E /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7962C1A000C871744DEA8749 /* Carbon.framework */; };
 		E0D569392AF757DBA985751B /* SensitiveDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D016E57FB2934597C170CF2E /* SensitiveDetector.swift */; };
@@ -48,6 +49,7 @@
 		25D03798180281E5E50877C7 /* ClippyManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClippyManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		287126468190BE4D2B77F2E1 /* SourceAppTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceAppTracker.swift; sourceTree = "<group>"; };
 		3407EA3AEF5AE4CB4B33D00D /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
+		3479A52DEAC56B3579670817 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		428B695C884D3BD8368763BF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		5114D33E7D43B0CAE0645F07 /* AddCategorySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCategorySheet.swift; sourceTree = "<group>"; };
 		58CA813BF491E22A53CDCE63 /* ShelfPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfPanel.swift; sourceTree = "<group>"; };
@@ -98,6 +100,7 @@
 				87C51D7A5A7D46C302086621 /* DetailPaneView.swift */,
 				96BACECBD8735C04EE23D705 /* LibraryView.swift */,
 				AE97497721F2E9CA0CD7CC28 /* SearchBarView.swift */,
+				3479A52DEAC56B3579670817 /* SettingsView.swift */,
 				B90D38E7DB7A141C7326257E /* ShelfView.swift */,
 				71F365CAEF8881A0CADFEC95 /* Theme.swift */,
 				19AF85F5F3734CF9A62FF5D7 /* UpgradeView.swift */,
@@ -294,6 +297,7 @@
 				0AC6C2B3CB327F09B06B1B00 /* PasteService.swift in Sources */,
 				2072CB128ACC1EC58C7A49AD /* SearchBarView.swift in Sources */,
 				E0D569392AF757DBA985751B /* SensitiveDetector.swift in Sources */,
+				C9FA28B136C9525BCDA20FE6 /* SettingsView.swift in Sources */,
 				B81F9490A6B859EC5A0A0054 /* ShelfPanel.swift in Sources */,
 				CDE6B43C3F1715D032C02B9A /* ShelfView.swift in Sources */,
 				17F98FA97486C7AECFED45C1 /* SourceAppTracker.swift in Sources */,
