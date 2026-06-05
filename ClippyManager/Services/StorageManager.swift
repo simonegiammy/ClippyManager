@@ -96,8 +96,10 @@ final class StorageManager {
     }
 
     private func seedDefaultCategoriesIfNeeded() {
-        guard categories().isEmpty,
-              !UserDefaults.standard.bool(forKey: "didSeedCategories") else { return }
+        // Seed only on a genuinely fresh store (no categories AND no clips), so
+        // categories the user later deletes are never resurrected.
+        let itemCount = (try? context.fetchCount(FetchDescriptor<ClipItem>())) ?? 0
+        guard categories().isEmpty, itemCount == 0 else { return }
         let defaults: [(String, String, String)] = [
             ("Prompts",      "text.bubble.fill",   "#A855F7"),
             ("Assets",       "square.stack.3d.up.fill", "#0080FF"),
@@ -106,7 +108,6 @@ final class StorageManager {
         for (i, d) in defaults.enumerated() {
             context.insert(Category(name: d.0, systemImage: d.1, colorHex: d.2, order: i))
         }
-        UserDefaults.standard.set(true, forKey: "didSeedCategories")
         save()
     }
 

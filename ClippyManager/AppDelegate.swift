@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import SwiftData
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
     private var container: ModelContainer!
     private var storageManager: StorageManager!
@@ -22,6 +22,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupClipboardMonitor()
         setupHotKeys()
         setupNotchDropZone()
+
+        // Debug-only: open a surface immediately for screenshots/testing.
+        if CommandLine.arguments.contains("--open-library") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openLibrary() }
+        }
+        if CommandLine.arguments.contains("--open-shelf") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openShelf() }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -171,6 +179,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Library window
 
     private func openLibrary() {
+        // A LSUIElement (.accessory) app must switch to .regular for a standard
+        // window to appear, gain focus, and show in the Dock/⌘-Tab.
+        NSApp.setActivationPolicy(.regular)
+
         if let win = libraryWindow {
             NSApp.activate(ignoringOtherApps: true)
             win.makeKeyAndOrderFront(nil)
@@ -191,10 +203,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         win.center()
         win.isReleasedWhenClosed = false
         win.appearance = NSAppearance(named: .darkAqua)
+        win.delegate = self
         libraryWindow = win
 
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard (notification.object as? NSWindow) === libraryWindow else { return }
+        // Return to menu-bar-only mode when the Library closes.
+        NSApp.setActivationPolicy(.accessory)
     }
 
     // MARK: - Recent paste (⌃⌘0–9)

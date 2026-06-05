@@ -1,6 +1,8 @@
 # ClippyManager
 
-A lightweight, privacy-first clipboard manager for macOS — lives in your menu bar, remembers everything you copy.
+A beautiful, privacy-first **visual clipboard manager** for macOS. Lives in your menu bar and at the notch — remembers everything you copy as a searchable, glassmorphic timeline of cards.
+
+> Inspired by the lovely [Supaste](https://www.supaste.com). Independent, open-source, built from scratch.
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift 5](https://img.shields.io/badge/Swift-5-orange)
@@ -9,27 +11,51 @@ A lightweight, privacy-first clipboard manager for macOS — lives in your menu 
 
 ---
 
-## Features
+## The notch shelf
 
-| Feature | Description |
-|---|---|
-| **Clipboard history** | Captures everything you copy: text, links, code, colors, images, files |
-| **Instant search** | Full-text search across your entire history |
-| **Smart categories** | Auto-classifies items into Text / Links / Code / Colors / Images / Files |
-| **Color detection** | Recognizes HEX, RGB, RGBA, HSL, HSLA, HSV, CMYK — with color swatch preview |
-| **Code detection** | Multi-line code snippets detected automatically with language hint |
-| **Pinned items** | Pin frequently-used items so they always stay at the top |
-| **Source app tracking** | See which app you copied from, with icon |
-| **Global shortcut** | Open the panel with ⌘⇧V from anywhere |
-| **Sort order** | Toggle Newest First / Oldest First |
-| **Privacy by design** | Zero cloud sync, zero tracking, zero analytics — data stays on your Mac |
-| **App Sandbox** | Fully sandboxed, App Store-ready |
+Press **⌃⌘V** (or drag something onto the notch) to open a dark glass shelf of your recent clips — right under the notch, over any app.
+
+![Notch shelf](docs/shelf.png)
+
+## The Library
+
+A full visual library: search, filter by type or source app, organize into custom categories, grouped by day.
+
+![Library](docs/library.png)
 
 ---
 
-## Screenshots
+## Features
 
-> _Coming soon — app icon and screenshots to be added._
+| | Feature |
+|---|---|
+| 🗂️ | **Visual card timeline** — every clip as a card with preview, source-app badge, timestamp & file size |
+| 🪟 | **Notch shelf** — floating dark-glass panel under the notch (⌃⌘V) |
+| 📚 | **Library window** — full grid, date-grouped (Today / Yesterday), with a detail pane |
+| 🏷️ | **Custom categories** — Prompts, Assets, Inspirations… create your own with icon + color |
+| 🔎 | **Instant search** + **type filters** + **source-app filters** (Safari, Figma, Slack…) |
+| 🎨 | **Color detection** — HEX, RGB, RGBA, HSL, HSLA → live color swatches |
+| 💻 | **Code detection** — multi-line snippets with monospace preview & language hint |
+| 🔗 | **Link detection** — gradient link cards, open or copy |
+| 📸 | **Screenshot history** — screen-sized clipboard images auto-tagged as screenshots |
+| 🫳 | **Drag in** — drop images/files/text onto the notch to save them manually |
+| ✊ | **Drag out** — drag any card straight into another app |
+| ⭐ | **Favorites** — star the clips you reuse most |
+| ⌨️ | **⌃⌘0–9** — paste one of your last 10 clips without opening a window |
+| 🔒 | **Sensitive detection** — passwords, cards, tokens & JWTs are masked |
+| ⏸️ | **Pause capture** — stop recording with one click |
+| 🛡️ | **Private by design** — 100% local, no cloud, no tracking, no analytics, App Sandbox |
+
+---
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `⌃⌘V` | Open / close the notch shelf |
+| `⌃⌘0` … `⌃⌘9` | Paste the Nth most-recent clip into the frontmost app* |
+
+\* Inline paste simulates ⌘V and needs Accessibility permission; otherwise the clip is placed on the clipboard for you to paste manually.
 
 ---
 
@@ -38,30 +64,25 @@ A lightweight, privacy-first clipboard manager for macOS — lives in your menu 
 - macOS 14.0 (Sonoma) or later
 - Xcode 15+ to build from source
 
----
-
 ## Building from source
 
 ```bash
-# 1. Clone
 git clone https://github.com/simonegiammy/ClippyManager.git
 cd ClippyManager
 
-# 2. Generate the Xcode project (requires xcodegen)
-brew install xcodegen
+brew install xcodegen      # project is generated from project.yml
 xcodegen generate
-
-# 3. Open in Xcode
-open ClippyManager.xcodeproj
-
-# 4. Build & Run (⌘R)
+open ClippyManager.xcodeproj   # then ⌘R
 ```
 
-> **Or build from the command line (unsigned, development only):**
-> ```bash
-> xcodebuild -scheme ClippyManager build \
->   CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
-> ```
+Command-line build (unsigned, dev only):
+
+```bash
+xcodebuild -scheme ClippyManager build \
+  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+```
+
+Handy debug launch flags: `--open-shelf`, `--open-library`.
 
 ---
 
@@ -69,73 +90,60 @@ open ClippyManager.xcodeproj
 
 ```
 ClippyManager/
-├── AppDelegate.swift          # NSStatusItem + NSPopover + lifecycle
-├── main.swift                 # Entry point
+├── AppDelegate.swift            # Menu bar + notch shelf panel + library window + hotkeys
 ├── Models/
-│   ├── ClipItem.swift         # SwiftData @Model
-│   └── ClipItemType.swift     # Enum: text/link/code/color/image/file
+│   ├── ClipItem.swift           # @Model: type, content, source, size, sensitive, category…
+│   ├── ClipItemType.swift       # text / link / code / color / image / file / screenshot
+│   └── Category.swift           # user-created categories
 ├── Services/
-│   ├── ClipboardMonitor.swift # NSPasteboard polling (0.4 s interval)
-│   ├── ContentClassifier.swift# Auto-classifies clipboard content
-│   ├── HotKeyManager.swift    # ⌘⇧V via Carbon RegisterEventHotKey
-│   ├── SourceAppTracker.swift # NSWorkspace frontmost app capture
-│   └── StorageManager.swift   # SwiftData container + CRUD + pruning
+│   ├── ClipboardMonitor.swift   # NSPasteboard polling → classify, size, sensitive, screenshot
+│   ├── ContentClassifier.swift  # link / color (hex+rgb+hsl) / code detection
+│   ├── SensitiveDetector.swift  # password / card / token / JWT heuristics
+│   ├── SourceAppTracker.swift   # frontmost-app capture + icons
+│   ├── ClipFilter.swift         # shared search / tab / type / app filter state
+│   ├── DropIngestor.swift       # manual drop-to-save ingestion
+│   ├── PasteService.swift       # copy + optional ⌘V auto-paste
+│   ├── HotKeyManager.swift      # Carbon ⌃⌘V + ⌃⌘0–9 (sandbox-safe)
+│   └── StorageManager.swift     # SwiftData container, categories, pruning
 ├── Views/
-│   ├── HistoryPanelView.swift # Main panel (search + chips + list + footer)
-│   ├── SearchBarView.swift
-│   ├── CategoryChipsView.swift
-│   ├── ClipRowView.swift
-│   ├── SettingsView.swift
-│   └── EmptyStateView.swift
-├── Extensions/
-│   └── Extensions.swift       # Color(hex:), Date.relativeShort, NSImage resize
-└── Resources/
-    ├── Assets.xcassets/       # App icon + teal AccentColor
-    └── PrivacyInfo.xcprivacy  # Privacy manifest: no data collection
+│   ├── Theme.swift              # dark glassmorphic design system
+│   ├── CardView.swift           # the clip card (preview + source + time + size + drag)
+│   ├── ShelfView.swift          # horizontal notch shelf
+│   ├── LibraryView.swift        # full grid library
+│   ├── DetailPaneView.swift     # preview + metadata + copy
+│   ├── CategoryTabsView.swift   # pill tabs + type/app filter bar
+│   ├── AddCategorySheet.swift   # create a category
+│   └── SearchBarView.swift
+└── Windows/
+    ├── ShelfPanel.swift         # borderless floating panel under the notch
+    └── NotchDropZone.swift      # always-on drag target that opens the shelf
 ```
 
-**Key technical decisions:**
-- **Persistence**: SwiftData (`@Model`), macOS 14+
-- **Global hotkey**: Carbon `RegisterEventHotKey` — sandbox-safe, no Accessibility permission required
-- **Clipboard monitor**: `NSPasteboard.changeCount` polling on main `RunLoop` with `.common` mode
-- **Observable state**: `@Observable` + `@Environment` (Swift 5.9 / macOS 14 approach)
-- **No paste simulation**: clicking an item puts it in the pasteboard; the user pastes normally with ⌘V (no Accessibility permission needed)
+**Key decisions**
+- **Persistence**: SwiftData (`@Model`), with declaration-level defaults so lightweight migration works across schema versions.
+- **Notch shelf**: a borderless `NSPanel` (`canBecomeKey`) pinned under the notch, forced dark appearance.
+- **Drop-to-save**: a thin always-on `NotchDropZone` panel opens the shelf on drag-enter; the shelf's `onDrop` ingests images/files/text.
+- **Global hotkeys**: Carbon `RegisterEventHotKey` — works in the sandbox without Accessibility.
+- **Library**: switches the app to `.regular` activation while open (a menu-bar app needs this to show a real window), back to `.accessory` on close.
 
 ---
 
 ## Roadmap
 
-- [ ] Secure Items — Touch ID / password protection for sensitive clips
-- [ ] Developer Mode — code editor with syntax highlighting
-- [ ] Text editor — edit before pasting
-- [ ] Source app filtering — filter history by which app you copied from
-- [ ] Time-based cleanup — clear Last Hour / Today / Yesterday / Last 7 days
-- [ ] Ignored apps list — privacy per-app (e.g. password managers)
-- [ ] Auto-paste — optional ⌘V simulation after copy (requires Accessibility)
-- [ ] App icon — custom teal/green icon design
-- [ ] App Store submission
-
----
+- [ ] Inline paste polish + first-run Accessibility onboarding
+- [ ] iCloud-free local encryption for sensitive items
+- [ ] Widgets & menu-bar quick view
+- [ ] Native screenshot capture shortcut
+- [ ] App Store release
 
 ## Contributing
 
-Pull requests are welcome. For significant changes, open an issue first to discuss what you'd like to change.
-
-1. Fork the repo
-2. Create a branch: `git checkout -b feature/my-feature`
-3. Commit your changes
-4. Push and open a PR
-
-Please keep changes focused and test on macOS 14+.
-
----
+PRs welcome. Fork → branch → commit → PR. Please test on macOS 14+.
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
-
----
+MIT — see [LICENSE](LICENSE).
 
 ## Inspired by
 
-[ClipBoardy](https://www.clipboardy.app) by Tristan Jarrett — an excellent clipboard manager on the App Store. ClippyManager is an independent open-source reimplementation built from scratch.
+[Supaste](https://www.supaste.com) by Solt Wagner. ClippyManager is an independent open-source reimplementation and is not affiliated with Supaste.
