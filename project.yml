@@ -51,3 +51,5 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     dependencies:
       - sdk: Carbon.framework
+      - sdk: FoundationModels.framework
+        weak: true

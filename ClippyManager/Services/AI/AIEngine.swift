@@ -1,0 +1,128 @@
+import Foundation
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
+
+/// On-device AI engine wrapping FoundationModels. All FM use is gated to
+/// macOS 26; on older systems the methods throw `AIEngineError.unavailable`.
+@MainActor
+final class AIEngine {
+
+    enum AIEngineError: LocalizedError {
+        case unavailable
+        case empty
+        var errorDescription: String? {
+            switch self {
+            case .unavailable: "On-device AI isn't available on this Mac."
+            case .empty:       "The model returned no output."
+            }
+        }
+    }
+
+    // Max characters fed to the model in one shot (small on-device context).
+    private let maxInputChars = 6000
+
+    #if canImport(FoundationModels)
+    @available(macOS 26, *)
+    private var _session: LanguageModelSession? {
+        get { _sessionBox as? LanguageModelSession }
+        set { _sessionBox = newValue }
+    }
+    private var _sessionBox: AnyObject?
+    #endif
+
+    init() {}
+
+    /// Warm the model so the first token after the palette opens is near-instant.
+    func prewarm() {
+        #if canImport(FoundationModels)
+        guard #available(macOS 26, *) else { return }
+        if _session == nil { _session = LanguageModelSession() }
+        _session?.prewarm()
+        #endif
+    }
+
+    /// Reset the conversation (fresh context per transform).
+    func resetSession() {
+        #if canImport(FoundationModels)
+        if #available(macOS 26, *) { _session = LanguageModelSession() }
+        #endif
+    }
+
+    /// Transform a clip with an action, yielding partial text as it streams.
+    /// Structured outputs (bullets/table/json) are produced whole, then yielded.
+    func transform(action: AIAction, clip: ClipItem, language: String?) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            Task { @MainActor in
+                #if canImport(FoundationModels)
+                guard #available(macOS 26, *) else {
+                    continuation.finish(throwing: AIEngineError.unavailable); return
+                }
+                do {
+                    try await self.run(action: action, clip: clip, language: language,
+                                       emit: { continuation.yield($0) })
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+                #else
+                continuation.finish(throwing: AIEngineError.unavailable)
+                #endif
+            }
+        }
+    }
+
+    // MARK: - Private
+
+    #if canImport(FoundationModels)
+    @available(macOS 26, *)
+    private func run(action: AIAction, clip: ClipItem, language: String?,
+                     emit: @escaping (String) -> Void) async throws {
+        let session = LanguageModelSession()      // fresh context each run
+        _session = session
+
+        let input = String((clip.textContent ?? "").prefix(maxInputChars))
+        let instruction = action.instruction.replacingOccurrences(of: "{lang}", with: language ?? "English")
+        let prompt = "\(instruction)\n\n\"\"\"\n\(input)\n\"\"\""
+
+        switch action.outputKind {
+        case .text:
+            var last = ""
+            let stream = session.streamResponse(to: prompt, generating: String.self)
+            for try await snapshot in stream {
+                last = snapshot.content
+                emit(last)
+            }
+            if last.isEmpty { throw AIEngineError.empty }
+
+        case .bullets:
+            let response = try await session.respond(to: prompt, generating: GeneratedBullets.self)
+            emit(response.content.asText())
+
+        case .table:
+            let response = try await session.respond(to: prompt, generating: GeneratedTable.self)
+            emit(response.content.asMarkdown())
+
+        case .json:
+            // Generate JSON as text, then validate + pretty-print.
+            let response = try await session.respond(to: prompt + "\nReturn only valid minified JSON.",
+                                                     generating: String.self)
+            emit(Self.prettyJSON(response.content))
+        }
+    }
+
+    private static func prettyJSON(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+        guard let data = trimmed.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data),
+              let pretty = try? JSONSerialization.data(withJSONObject: obj,
+                                                       options: [.prettyPrinted, .sortedKeys]),
+              let str = String(data: pretty, encoding: .utf8) else {
+            return trimmed   // not valid JSON — show what we got
+        }
+        return str
+    }
+    #endif
+}

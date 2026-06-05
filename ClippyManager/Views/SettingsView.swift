@@ -5,6 +5,7 @@ import ServiceManagement
 struct SettingsView: View {
     @Environment(StorageManager.self) private var storage
     @Environment(LicenseManager.self) private var license
+    @Environment(AIAvailability.self) private var ai
 
     @AppStorage("hoverToOpen") private var hoverToOpen = true
     @AppStorage("autoCheckUpdates") private var autoCheckUpdates = true
@@ -57,8 +58,10 @@ struct SettingsView: View {
                     .font(.system(size: 13))
                 }
 
+                aiSection
+
                 section("Shortcuts") {
-                    shortcutRow("Open the shelf", keys: ["⌃", "⌘", "V"])
+                    shortcutRow("Open the paste palette", keys: ["⌃", "⌘", "V"])
                     Divider().overlay(Theme.cardBorder)
                     shortcutRow("Paste recent clip", keys: ["⌃", "⌘", "0–9"])
                 }
@@ -119,6 +122,55 @@ struct SettingsView: View {
     }
 
     // MARK: - Pieces
+
+    private var aiSection: some View {
+        section("AI Actions") {
+            HStack(spacing: 8) {
+                Image(systemName: ai.status.isAvailable ? "sparkles" : "sparkles.slash")
+                    .foregroundStyle(ai.status.isAvailable ? Theme.accent : Theme.textSecondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(ai.status.title)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(ai.status.isAvailable ? "On-device · summarize, rewrite, translate, →JSON…"
+                                               : "On-device AI transformations for your clips")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.textTertiary)
+                }
+                Spacer()
+            }
+
+            Text(ai.status.explanation)
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !ai.status.fixSteps.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(ai.status.fixSteps.enumerated()), id: \.offset) { i, step in
+                        Text("\(i + 1). \(step)")
+                            .font(.system(size: 10)).foregroundStyle(Theme.textTertiary)
+                    }
+                }
+            }
+
+            if ai.status.canFix {
+                Button { ai.openFix() } label: {
+                    Text(ai.status.fixActionLabel)
+                        .font(.system(size: 12, weight: .semibold))
+                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Divider().overlay(Theme.cardBorder)
+
+            toggleRow("Show AI actions in the palette", systemImage: "wand.and.stars",
+                      isOn: Binding(get: { ai.userEnabled }, set: { ai.userEnabled = $0 }))
+        }
+    }
 
     private var header: some View {
         HStack(spacing: 10) {

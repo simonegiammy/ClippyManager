@@ -17,6 +17,28 @@ Press **⌃⌘V**, **hover the notch**, or **drag something onto it** to open a 
 
 ![Notch shelf](docs/shelf.png)
 
+## AI actions — on-device (Apple Intelligence)
+
+Press **⌃⌘V** to open a keyboard-first paste palette. Pick a clip, then:
+
+- **↩** pastes the **original** (classic behavior, untouched)
+- **⌘↩** runs the **suggested AI action** (summarize, rewrite, translate, explain code, → JSON…)
+- **→** opens the full action menu (fuzzy-searchable)
+
+The result **streams in a preview** you approve before it lands — and a derived clip is
+saved so the original is never lost. Everything runs **100% on your Mac** via Apple's
+on-device Foundation Models. Actions are clip-bound and contextual: the suggested default
+adapts to the clip type **and** the app you're pasting into.
+
+![Paste palette](docs/palette.png)
+
+**No Apple Intelligence yet?** The palette still works as a fast keyboard paste tool, and AI
+actions appear as a **teaser** — you can see exactly what each would do, with a guided path to
+enable it (also in Settings → AI Actions). Three availability layers are handled honestly:
+needs-macOS-26 · device-not-eligible · not-enabled / model-downloading.
+
+![AI teaser & guidance](docs/ai-teaser.png)
+
 ## The Library
 
 A full visual library: search, filter by type or source app, organize into custom categories, grouped by day.
@@ -30,7 +52,8 @@ A full visual library: search, filter by type or source app, organize into custo
 | | Feature |
 |---|---|
 | 🗂️ | **Visual card timeline** — every clip as a card with preview, source-app badge, timestamp & file size |
-| 🪟 | **Notch shelf** — floating dark-glass panel under the notch (⌃⌘V) |
+| 🤖 | **On-device AI actions** — summarize, rewrite, translate, fix grammar, explain code, →JSON/table/bullets, all local via Apple Foundation Models (⌃⌘V palette) |
+| 🪟 | **Notch shelf** — floating dark-glass panel under the notch (hover/drag) |
 | 🖱️ | **Hover to peek** — move the mouse to the notch (no drag) and the shelf opens; it auto-closes when you leave |
 | 📚 | **Library window** — full grid, date-grouped (Today / Yesterday), with a detail pane |
 | 🏷️ | **Custom categories** — Prompts, Assets, Inspirations… create your own with icon + color |
@@ -95,8 +118,11 @@ so enabling enforcement later is seamless.
 
 | Shortcut | Action |
 |---|---|
-| `⌃⌘V` | Open / close the notch shelf |
+| `⌃⌘V` | Open the keyboard-first paste palette (with AI actions) |
+| `↩` / `⌘↩` / `→` | In palette: paste original / run default AI action / open action menu |
+| `⌘R` · `esc` | In AI preview: regenerate · revert to the clip |
 | `⌃⌘0` … `⌃⌘9` | Paste the Nth most-recent clip into the frontmost app* |
+| hover / drag notch | Open the horizontal shelf (peek / drop-to-save) |
 
 \* Inline paste simulates ⌘V and needs Accessibility permission; otherwise the clip is placed on the clipboard for you to paste manually.
 
@@ -149,7 +175,17 @@ ClippyManager/
 │   ├── HotKeyManager.swift      # Carbon ⌃⌘V + ⌃⌘0–9 (sandbox-safe)
 │   ├── LicenseManager.swift     # 3-day trial + promo codes (dormant by default)
 │   ├── StoreManager.swift       # StoreKit 2 lifetime IAP (scaffolded)
-│   └── StorageManager.swift     # SwiftData container, categories, pruning
+│   ├── StorageManager.swift     # SwiftData container, categories, pruning
+│   └── AI/
+│       ├── AIAvailability.swift # 3-layer status + deep-link guidance (macOS 26)
+│       ├── AIAction.swift       # clip-bound action model
+│       ├── AIActionCatalog.swift# catalog + contextual ordering (type × app)
+│       ├── AIEngine.swift       # LanguageModelSession: prewarm, stream, structured
+│       └── GeneratedOutputs.swift # @Generable bullets / table
+├── Views/Palette/               # keyboard-first ⌃⌘V paste palette
+│   ├── PaletteController.swift  # state machine + 3-key handling
+│   ├── PastePaletteView.swift · PaletteRowView · ActionBarView
+│   ├── ActionMenuView · TransformPreviewView (streaming) · AIUnavailableView
 ├── Views/
 │   ├── Theme.swift              # dark glassmorphic design system
 │   ├── CardView.swift           # the clip card (preview + source + time + size + drag)

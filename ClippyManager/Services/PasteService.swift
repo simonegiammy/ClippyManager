@@ -33,6 +33,23 @@ enum PasteService {
         }
     }
 
+    /// Copy arbitrary text (e.g. an AI-transformed result) to the clipboard.
+    static func copy(text: String) {
+        NotificationCenter.default.post(name: ClipboardMonitor.appDidCopy, object: nil)
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(text, forType: .string)
+    }
+
+    /// Copy arbitrary text then simulate ⌘V into the frontmost app.
+    static func pasteText(_ text: String) {
+        copy(text: text)
+        guard AXIsProcessTrusted() else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            simulateCommandV()
+        }
+    }
+
     private static func simulateCommandV() {
         let src = CGEventSource(stateID: .combinedSessionState)
         let vKey = CGKeyCode(kVK_ANSI_V)

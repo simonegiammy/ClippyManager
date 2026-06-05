@@ -18,6 +18,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var libraryWindow: NSWindow?
     private var notchDropZone: NotchDropZone?
     private var localClickMonitor: Any?
+
+    // AI paste palette
+    private var aiAvailability: AIAvailability!
+    private var aiEngine: AIEngine!
+    private var palettePanel: PastePalettePanel?
+    private var paletteClickMonitor: Any?
     private var shelfHoverActivated = false   // shelf opened via hover → auto-closes on leave
 
     private var hoverToOpenEnabled: Bool {
@@ -47,6 +53,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if CommandLine.arguments.contains("--open-settings") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openSettings() }
         }
+        if CommandLine.arguments.contains("--open-palette") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.openPastePalette() }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -66,6 +75,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         storageManager = StorageManager(container: container)
         licenseManager = LicenseManager()
         storeManager = StoreManager(license: licenseManager)
+        aiAvailability = AIAvailability()
+        aiEngine = AIEngine()
     }
 
     private func setupStatusItem() {
@@ -87,7 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func setupHotKeys() {
         hotKeyManager = HotKeyManager(
             onToggle: { [weak self] in
-                DispatchQueue.main.async { self?.toggleShelf() }
+                DispatchQueue.main.async { self?.togglePastePalette() }
             },
             onRecent: { [weak self] index in
                 DispatchQueue.main.async { self?.pasteRecent(index) }
@@ -324,6 +335,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let root = SettingsView(onOpenUpgrade: { [weak self] in self?.openUpgrade() })
             .environment(storageManager)
             .environment(licenseManager)
+            .environment(aiAvailability)
 
         let hosting = NSHostingController(rootView: root)
         let win = NSWindow(contentViewController: hosting)
@@ -345,6 +357,87 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let recents = storageManager.recentItems(limit: 10)
         guard index < recents.count else { return }
         PasteService.pasteIntoFrontmostApp(recents[index])
+    }
+
+    // MARK: - AI paste palette (⌃⌘V)
+
+    private func togglePastePalette() {
+        if let panel = palettePanel, panel.isVisible { closePastePalette() }
+        else { openPastePalette() }
+    }
+
+    private func openPastePalette() {
+        // Capture the DESTINATION app (frontmost now, before we steal focus).
+        let tracker = SourceAppTracker()
+        tracker.capture()
+        let destinationBundleID = tracker.current.bundleID
+
+        aiAvailability.refresh()
+
+        let controller = PaletteController(
+            availability: aiAvailability,
+            engine: aiEngine,
+            destinationBundleID: destinationBundleID,
+            onPasteOriginal: { [weak self] item in self?.pasteOriginalFromPalette(item) },
+            onPasteText: { [weak self] text, source in self?.pasteTextFromPalette(text, source: source) },
+            onClose: { [weak self] in self?.closePastePalette() }
+        )
+        controller.allItems = storageManager.recentItems(limit: 200)
+
+        let panel = PastePalettePanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 420))
+        let root = PastePaletteView(controller: controller)
+            .modelContainer(container)
+        let hosting = NSHostingView(rootView: root)
+        hosting.autoresizingMask = [.width, .height]
+        panel.contentView = hosting
+        palettePanel = panel
+
+        panel.positionCentered()
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
+
+        // Pre-warm the model so the first transform is snappy.
+        aiEngine.prewarm()
+
+        // Close on outside click.
+        removePaletteClickMonitor()
+        paletteClickMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in self?.closePastePalette() }
+    }
+
+    private func closePastePalette() {
+        palettePanel?.orderOut(nil)
+        palettePanel = nil
+        removePaletteClickMonitor()
+    }
+
+    private func removePaletteClickMonitor() {
+        if let m = paletteClickMonitor { NSEvent.removeMonitor(m); paletteClickMonitor = nil }
+    }
+
+    /// Enter → paste the original clip into the destination app.
+    private func pasteOriginalFromPalette(_ item: ClipItem) {
+        closePastePalette()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            PasteService.pasteIntoFrontmostApp(item)
+        }
+    }
+
+    /// ⌘Return in preview → save derived clip (original preserved) + paste result.
+    private func pasteTextFromPalette(_ text: String, source: ClipItem) {
+        let derived = ClipItem(
+            type: .text,
+            textContent: text,
+            sourceAppName: "AI",
+            sourceAppBundleID: source.sourceAppBundleID,
+            byteSize: text.utf8.count
+        )
+        storageManager.add(derived)
+        closePastePalette()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            PasteService.pasteText(text)
+        }
     }
 
     // MARK: - Helpers
