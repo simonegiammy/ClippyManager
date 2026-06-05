@@ -13,6 +13,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var libraryWindow: NSWindow?
     private var notchDropZone: NotchDropZone?
     private var localClickMonitor: Any?
+    private var shelfHoverActivated = false   // shelf opened via hover → auto-closes on leave
+
+    private var hoverToOpenEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: "hoverToOpen") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "hoverToOpen") }
+    }
 
     // MARK: - Lifecycle
 
@@ -78,9 +84,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func setupNotchDropZone() {
-        let zone = NotchDropZone(onDragEnter: { [weak self] in
-            DispatchQueue.main.async { self?.openShelf() }
-        })
+        let zone = NotchDropZone(
+            onDragEnter: { [weak self] in
+                DispatchQueue.main.async { self?.openShelf() }
+            },
+            onHover: { [weak self] in
+                DispatchQueue.main.async { self?.peekShelf() }
+            }
+        )
+        zone.isHoverEnabled = hoverToOpenEnabled
         zone.position()
         zone.orderFront(nil)
         notchDropZone = zone
@@ -115,6 +127,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             action: #selector(menuTogglePause), keyEquivalent: ""
         )
         menu.addItem(pauseItem)
+
+        let hoverItem = NSMenuItem(
+            title: "Hover to Open", action: #selector(menuToggleHover), keyEquivalent: ""
+        )
+        hoverItem.state = hoverToOpenEnabled ? .on : .off
+        menu.addItem(hoverItem)
+
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Clippy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.items.forEach { $0.target = self }
@@ -127,6 +146,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func menuToggleShelf() { toggleShelf() }
     @objc private func menuOpenLibrary() { openLibrary() }
     @objc private func menuTogglePause() { storageManager.isCapturePaused.toggle() }
+    @objc private func menuToggleHover() {
+        hoverToOpenEnabled.toggle()
+        notchDropZone?.isHoverEnabled = hoverToOpenEnabled
+    }
 
     // MARK: - Shelf
 
@@ -134,8 +157,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let panel = shelfPanel, panel.isVisible {
             closeShelf()
         } else {
+            shelfHoverActivated = false   // explicit open → stays until clicked away
             openShelf()
         }
+    }
+
+    /// Open the shelf from a hover (peek). Auto-closes when the mouse leaves.
+    private func peekShelf() {
+        guard hoverToOpenEnabled else { return }
+        if let panel = shelfPanel, panel.isVisible { return }
+        shelfHoverActivated = true
+        openShelf()
     }
 
     private func openShelf() {
@@ -164,7 +196,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         panel.appearance = NSAppearance(named: .darkAqua)
         let root = ShelfView(
             onOpenLibrary: { [weak self] in self?.closeShelf(); self?.openLibrary() },
-            onClose: { [weak self] in self?.closeShelf() }
+            onClose: { [weak self] in self?.closeShelf() },
+            shouldAutoCloseOnLeave: { [weak self] in self?.shelfHoverActivated ?? false }
         )
         .environment(storageManager)
         .modelContainer(container)

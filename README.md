@@ -13,7 +13,7 @@ A beautiful, privacy-first **visual clipboard manager** for macOS. Lives in your
 
 ## The notch shelf
 
-Press **⌃⌘V** (or drag something onto the notch) to open a dark glass shelf of your recent clips — right under the notch, over any app.
+Press **⌃⌘V**, **hover the notch**, or **drag something onto it** to open a dark glass shelf of your recent clips — right under the notch, over any app. Opened by hover, it peeks and auto-retracts when the mouse leaves. (Toggle hover from the menu-bar icon.)
 
 ![Notch shelf](docs/shelf.png)
 
@@ -31,6 +31,7 @@ A full visual library: search, filter by type or source app, organize into custo
 |---|---|
 | 🗂️ | **Visual card timeline** — every clip as a card with preview, source-app badge, timestamp & file size |
 | 🪟 | **Notch shelf** — floating dark-glass panel under the notch (⌃⌘V) |
+| 🖱️ | **Hover to peek** — move the mouse to the notch (no drag) and the shelf opens; it auto-closes when you leave |
 | 📚 | **Library window** — full grid, date-grouped (Today / Yesterday), with a detail pane |
 | 🏷️ | **Custom categories** — Prompts, Assets, Inspirations… create your own with icon + color |
 | 🔎 | **Instant search** + **type filters** + **source-app filters** (Safari, Figma, Slack…) |

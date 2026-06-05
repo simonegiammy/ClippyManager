@@ -13,9 +13,11 @@ struct ShelfView: View {
     @State private var showAddCategory = false
     @State private var copiedID: UUID? = nil
     @State private var isDropTargeted = false
+    @State private var leaveWork: DispatchWorkItem?
 
     var onOpenLibrary: () -> Void
     var onClose: () -> Void
+    var shouldAutoCloseOnLeave: () -> Bool = { false }
 
     private var filtered: [ClipItem] {
         filter.apply(to: allItems, categories: categories)
@@ -51,10 +53,24 @@ struct ShelfView: View {
                 isTargeted: $isDropTargeted) { providers in
             DropIngestor.ingest(providers: providers, into: storage)
         }
+        .onHover { inside in handleHover(inside) }
         .environment(\.colorScheme, .dark)
         .sheet(isPresented: $showAddCategory) {
             AddCategorySheet().environment(storage)
         }
+    }
+
+    /// When the shelf was opened by hovering the notch, close it shortly after
+    /// the pointer leaves — so it behaves like a peek.
+    private func handleHover(_ inside: Bool) {
+        leaveWork?.cancel()
+        guard shouldAutoCloseOnLeave() else { return }
+        if inside { return }
+        let work = DispatchWorkItem {
+            if copiedID == nil { onClose() }
+        }
+        leaveWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
     }
 
     @ViewBuilder
