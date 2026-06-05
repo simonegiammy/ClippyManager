@@ -49,6 +49,33 @@ A full visual library: search, filter by type or source app, organize into custo
 
 ---
 
+## Licensing (dormant)
+
+ClippyManager ships with a **3-day free trial → one-time lifetime unlock** flow
+that is **switched off by default** — the app is fully usable. The scaffolding is
+ready so you only need to wire the App Store product and flip one flag.
+
+![Unlock screen](docs/upgrade.png)
+
+**To go live:**
+1. Create a **Non-Consumable** IAP in App Store Connect with id
+   `com.giammy.clippymanager.lifetime` (see `LicenseManager.lifetimeProductID`).
+2. Set `LicenseManager.enforcementEnabled = true` (or launch with
+   `--enforce-license` / env `CLIPPY_ENFORCE_LICENSE=1` to test).
+3. Done — after 3 days the shelf/library show an **Unlock Lifetime** prompt;
+   `StoreManager` (StoreKit 2) handles purchase + restore.
+
+**Promo codes** work offline today via the Unlock screen. Codes are matched by
+**SHA-256 hash** (plaintext never ships in the binary) and can only be redeemed
+once per device. Add your own in `LicenseManager.promoCodeHashes`:
+
+```bash
+printf '%s' "YOUR-CODE" | shasum -a 256   # add the hash to the set
+```
+
+The trial countdown (`firstLaunchDate`) is recorded from first launch regardless,
+so enabling enforcement later is seamless.
+
 ## Keyboard shortcuts
 
 | Shortcut | Action |
@@ -105,6 +132,8 @@ ClippyManager/
 │   ├── DropIngestor.swift       # manual drop-to-save ingestion
 │   ├── PasteService.swift       # copy + optional ⌘V auto-paste
 │   ├── HotKeyManager.swift      # Carbon ⌃⌘V + ⌃⌘0–9 (sandbox-safe)
+│   ├── LicenseManager.swift     # 3-day trial + promo codes (dormant by default)
+│   ├── StoreManager.swift       # StoreKit 2 lifetime IAP (scaffolded)
 │   └── StorageManager.swift     # SwiftData container, categories, pruning
 ├── Views/
 │   ├── Theme.swift              # dark glassmorphic design system
@@ -114,6 +143,7 @@ ClippyManager/
 │   ├── DetailPaneView.swift     # preview + metadata + copy
 │   ├── CategoryTabsView.swift   # pill tabs + type/app filter bar
 │   ├── AddCategorySheet.swift   # create a category
+│   ├── UpgradeView.swift        # trial / lifetime unlock / promo code
 │   └── SearchBarView.swift
 └── Windows/
     ├── ShelfPanel.swift         # borderless floating panel under the notch

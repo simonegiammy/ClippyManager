@@ -2,12 +2,16 @@ import AppKit
 import SwiftUI
 import SwiftData
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
     private var container: ModelContainer!
     private var storageManager: StorageManager!
     private var clipboardMonitor: ClipboardMonitor!
     private var hotKeyManager: HotKeyManager!
+    private var licenseManager: LicenseManager!
+    private var storeManager: StoreManager!
+    private var upgradeWindow: NSWindow?
 
     private var shelfPanel: ShelfPanel?
     private var libraryWindow: NSWindow?
@@ -36,6 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if CommandLine.arguments.contains("--open-shelf") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openShelf() }
         }
+        if CommandLine.arguments.contains("--open-upgrade") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openUpgrade() }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -53,6 +60,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             fatalError("SwiftData init failed: \(error)")
         }
         storageManager = StorageManager(container: container)
+        licenseManager = LicenseManager()
+        storeManager = StoreManager(license: licenseManager)
     }
 
     private func setupStatusItem() {
@@ -135,6 +144,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.addItem(hoverItem)
 
         menu.addItem(.separator())
+
+        let statusLine = NSMenuItem(title: licenseManager.statusSummary, action: nil, keyEquivalent: "")
+        statusLine.isEnabled = false
+        menu.addItem(statusLine)
+        let unlockTitle = licenseManager.isPurchased ? "Licensing…" : "Unlock Lifetime / Promo…"
+        menu.addItem(withTitle: unlockTitle, action: #selector(menuOpenUpgrade), keyEquivalent: "")
+
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Clippy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.items.forEach { $0.target = self }
         menu.items.last?.target = NSApp
@@ -150,6 +167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         hoverToOpenEnabled.toggle()
         notchDropZone?.isHoverEnabled = hoverToOpenEnabled
     }
+    @objc private func menuOpenUpgrade() { openUpgrade() }
 
     // MARK: - Shelf
 
@@ -197,9 +215,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let root = ShelfView(
             onOpenLibrary: { [weak self] in self?.closeShelf(); self?.openLibrary() },
             onClose: { [weak self] in self?.closeShelf() },
+            onOpenUpgrade: { [weak self] in self?.closeShelf(); self?.openUpgrade() },
             shouldAutoCloseOnLeave: { [weak self] in self?.shelfHoverActivated ?? false }
         )
         .environment(storageManager)
+        .environment(licenseManager)
+        .environment(storeManager)
         .modelContainer(container)
 
         let hosting = NSHostingView(rootView: root)
@@ -222,8 +243,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return
         }
 
-        let root = LibraryView()
+        let root = LibraryView(onOpenUpgrade: { [weak self] in self?.openUpgrade() })
             .environment(storageManager)
+            .environment(licenseManager)
+            .environment(storeManager)
             .modelContainer(container)
 
         let hosting = NSHostingController(rootView: root)
@@ -244,9 +267,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
-        guard (notification.object as? NSWindow) === libraryWindow else { return }
-        // Return to menu-bar-only mode when the Library closes.
-        NSApp.setActivationPolicy(.accessory)
+        let win = notification.object as? NSWindow
+        guard win === libraryWindow || win === upgradeWindow else { return }
+        if win === upgradeWindow { upgradeWindow = nil }
+        // Return to menu-bar-only mode when no managed window remains open.
+        if (libraryWindow?.isVisible != true) && (upgradeWindow?.isVisible != true) {
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+
+    // MARK: - Upgrade / licensing window
+
+    private func openUpgrade() {
+        NSApp.setActivationPolicy(.regular)
+        if let win = upgradeWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            win.makeKeyAndOrderFront(nil)
+            return
+        }
+        let root = UpgradeView(onClose: { [weak self] in self?.upgradeWindow?.close() })
+            .environment(licenseManager)
+            .environment(storeManager)
+
+        let hosting = NSHostingController(rootView: root)
+        let win = NSWindow(contentViewController: hosting)
+        win.title = "Unlock Clippy"
+        win.styleMask = [.titled, .closable, .fullSizeContentView]
+        win.titlebarAppearsTransparent = true
+        win.titleVisibility = .hidden
+        win.isReleasedWhenClosed = false
+        win.appearance = NSAppearance(named: .darkAqua)
+        win.delegate = self
+        win.center()
+        upgradeWindow = win
+        NSApp.activate(ignoringOtherApps: true)
+        win.makeKeyAndOrderFront(nil)
     }
 
     // MARK: - Recent paste (⌃⌘0–9)

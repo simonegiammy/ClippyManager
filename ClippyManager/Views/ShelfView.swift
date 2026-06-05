@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 /// The Supaste-style notch shelf: a dark glass horizontal panel with cards.
 struct ShelfView: View {
     @Environment(StorageManager.self) private var storage
+    @Environment(LicenseManager.self) private var license
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClipItem.createdAt, order: .reverse) private var allItems: [ClipItem]
     @Query(sort: \Category.order) private var categories: [Category]
@@ -17,6 +18,7 @@ struct ShelfView: View {
 
     var onOpenLibrary: () -> Void
     var onClose: () -> Void
+    var onOpenUpgrade: () -> Void = {}
     var shouldAutoCloseOnLeave: () -> Bool = { false }
 
     private var filtered: [ClipItem] {
@@ -36,9 +38,13 @@ struct ShelfView: View {
     var body: some View {
         VStack(spacing: 10) {
             topBar
-            CategoryTabsView(filter: filter, categories: categories,
-                             counts: counts, onAddCategory: { showAddCategory = true })
-            cards
+            if license.isLocked {
+                lockedState
+            } else {
+                CategoryTabsView(filter: filter, categories: categories,
+                                 counts: counts, onAddCategory: { showAddCategory = true })
+                cards
+            }
         }
         .padding(14)
         .frame(width: 720, height: 230)
@@ -71,6 +77,26 @@ struct ShelfView: View {
         }
         leaveWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
+    }
+
+    private var lockedState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 26))
+                .foregroundStyle(Theme.accent)
+            Text("Your trial has ended")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Theme.textPrimary)
+            Button { onOpenUpgrade() } label: {
+                Text("Unlock Lifetime — \(LicenseManager.displayPrice)")
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 16).padding(.vertical, 8)
+                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 9))
+                    .foregroundStyle(.white)
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
