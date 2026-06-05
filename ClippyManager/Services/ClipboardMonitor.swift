@@ -2,8 +2,6 @@ import AppKit
 
 final class ClipboardMonitor {
 
-    // Notifica postata da HistoryPanelView prima di scrivere nel pasteboard,
-    // così il monitor non rileva i propri copy come nuovi item
     static let appDidCopy = Notification.Name("ClipboardMonitor.appDidCopy")
 
     private let storageManager: StorageManager
@@ -17,18 +15,10 @@ final class ClipboardMonitor {
         self.storageManager = storageManager
         self.lastChangeCount = NSPasteboard.general.changeCount
 
-        // Quando l'app copia nel pasteboard (click su un item),
-        // sopprimi il prossimo ciclo di monitoraggio per evitare
-        // il loop: click → pasteboard change → SwiftData save →
-        // @Query reload → SwiftUI re-render → hit-test rotto
         NotificationCenter.default.addObserver(
-            forName: Self.appDidCopy,
-            object: nil,
-            queue: .main
+            forName: Self.appDidCopy, object: nil, queue: .main
         ) { [weak self] _ in
             self?.suppressUntil = Date().addingTimeInterval(1.5)
-            // Aggiorna il contatore subito così il monitor non rileva
-            // il cambio quando riprende
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                 self?.lastChangeCount = NSPasteboard.general.changeCount
             }
@@ -36,22 +26,21 @@ final class ClipboardMonitor {
     }
 
     func start() {
-        let t = Timer(timeInterval: 0.4, repeats: true) { [weak self] _ in
-            self?.poll()
-        }
+        let t = Timer(timeInterval: 0.4, repeats: true) { [weak self] _ in self?.poll() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
     }
 
-    func stop() {
-        timer?.invalidate()
-        timer = nil
-    }
+    func stop() { timer?.invalidate(); timer = nil }
 
     // MARK: - Private
 
     private func poll() {
-        // Durante la soppressione aggiorna solo il contatore, non processare
+        // Respect global pause — keep counter in sync so resume doesn't backfill
+        guard !storageManager.isCapturePaused else {
+            lastChangeCount = NSPasteboard.general.changeCount
+            return
+        }
         guard Date() >= suppressUntil else {
             lastChangeCount = NSPasteboard.general.changeCount
             return
@@ -65,7 +54,7 @@ final class ClipboardMonitor {
         sourceTracker.capture()
         let (appName, bundleID) = sourceTracker.current
 
-        // 1. Testo / link / code / colori
+        // 1. Text / links / code / colors
         if let text = board.string(forType: .string), !text.isEmpty {
             let type = classifier.classify(text: text)
             let item = ClipItem(
@@ -73,37 +62,71 @@ final class ClipboardMonitor {
                 textContent: text,
                 sourceAppName: appName,
                 sourceAppBundleID: bundleID,
+                sourceURL: type == .link ? text.trimmingCharacters(in: .whitespacesAndNewlines) : nil,
                 colorHex: type == .color ? classifier.extractColorHex(from: text) : nil,
-                detectedLanguage: type == .code ? classifier.detectLanguage(text) : nil
+                detectedLanguage: type == .code ? classifier.detectLanguage(text) : nil,
+                byteSize: text.utf8.count,
+                isSensitive: SensitiveDetector.isSensitive(text)
             )
             storageManager.add(item)
             return
         }
 
-        // 2. Immagine
+        // 2. Image (could be a screenshot)
         if let image = NSImage(pasteboard: board),
-           let tiff = image.tiffRepresentation {
+           let tiff = image.tiffRepresentation,
+           let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+            let isShot = looksLikeScreenshot(bundleID: bundleID, image: image)
             let item = ClipItem(
-                type: .image,
-                imageData: tiff,
-                sourceAppName: appName,
-                sourceAppBundleID: bundleID
+                type: isShot ? .screenshot : .image,
+                imageData: png,
+                sourceAppName: isShot ? "Screenshot" : appName,
+                sourceAppBundleID: bundleID,
+                byteSize: png.count
             )
             storageManager.add(item)
             return
         }
 
-        // 3. File URL
+        // 3. File URLs
         if let objects = board.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
            !objects.isEmpty {
             let paths = objects.map(\.path).joined(separator: "\n")
+            let totalSize = objects.reduce(0) { acc, url in
+                acc + ((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+            }
             let item = ClipItem(
                 type: .file,
                 textContent: paths,
                 sourceAppName: appName,
-                sourceAppBundleID: bundleID
+                sourceAppBundleID: bundleID,
+                byteSize: totalSize
             )
             storageManager.add(item)
         }
+    }
+
+    /// Heuristic: a macOS screenshot copied to the clipboard matches one of the
+    /// connected screens' pixel dimensions (full-screen grab) or a 2x scale of it.
+    private func looksLikeScreenshot(bundleID: String?, image: NSImage) -> Bool {
+        guard let rep = image.representations.first else { return false }
+        let w = CGFloat(rep.pixelsWide)
+        let h = CGFloat(rep.pixelsHigh)
+        guard w > 0, h > 0 else { return false }
+
+        for screen in NSScreen.screens {
+            let scale = screen.backingScaleFactor
+            let sw = screen.frame.width * scale
+            let sh = screen.frame.height * scale
+            // Exact full-screen capture
+            if abs(w - sw) < 2 && abs(h - sh) < 2 { return true }
+            // Region grabs share the screen's aspect ratio at high resolution
+            if w >= 200 && h >= 200 {
+                let screenAspect = sw / sh
+                let imgAspect = w / h
+                if abs(screenAspect - imgAspect) < 0.02 && w > sw * 0.4 { return true }
+            }
+        }
+        return false
     }
 }

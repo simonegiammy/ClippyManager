@@ -1,18 +1,25 @@
 import Foundation
 import SwiftData
+import AppKit
 
 @Model
-class ClipItem {
-    var id: UUID
-    var typeRaw: String
+final class ClipItem {
+    // NOTE: non-optional properties carry declaration-level defaults so that
+    // SwiftData lightweight migration can backfill rows from older schemas.
+    var id: UUID = UUID()
+    var typeRaw: String = ClipItemType.text.rawValue
     var textContent: String?
     @Attribute(.externalStorage) var imageData: Data?
     var sourceAppName: String?
     var sourceAppBundleID: String?
-    var isPinned: Bool
-    var createdAt: Date
+    var sourceURL: String?
+    var isPinned: Bool = false          // "favorite" (star)
+    var createdAt: Date = Date.now
     var colorHex: String?
     var detectedLanguage: String?
+    var byteSize: Int = 0
+    var isSensitive: Bool = false
+    var categoryID: UUID?       // assigned custom category
 
     init(
         type: ClipItemType,
@@ -20,8 +27,11 @@ class ClipItem {
         imageData: Data? = nil,
         sourceAppName: String? = nil,
         sourceAppBundleID: String? = nil,
+        sourceURL: String? = nil,
         colorHex: String? = nil,
-        detectedLanguage: String? = nil
+        detectedLanguage: String? = nil,
+        byteSize: Int = 0,
+        isSensitive: Bool = false
     ) {
         self.id = UUID()
         self.typeRaw = type.rawValue
@@ -29,10 +39,14 @@ class ClipItem {
         self.imageData = imageData
         self.sourceAppName = sourceAppName
         self.sourceAppBundleID = sourceAppBundleID
+        self.sourceURL = sourceURL
         self.isPinned = false
-        self.createdAt = Date.now
+        self.createdAt = .now
         self.colorHex = colorHex
         self.detectedLanguage = detectedLanguage
+        self.byteSize = byteSize
+        self.isSensitive = isSensitive
+        self.categoryID = nil
     }
 
     var type: ClipItemType {
@@ -42,8 +56,8 @@ class ClipItem {
 
     var preview: String {
         switch type {
-        case .image:
-            return "Image"
+        case .image, .screenshot:
+            return type == .screenshot ? "Screenshot" : "Image"
         case .file:
             guard let t = textContent else { return "File" }
             let first = t.components(separatedBy: "\n").first ?? t
@@ -52,7 +66,25 @@ class ClipItem {
             return textContent ?? colorHex ?? "Color"
         default:
             let raw = textContent ?? ""
-            return String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
+            return String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(300))
         }
+    }
+
+    /// Single-line title for compact display.
+    var title: String {
+        preview.components(separatedBy: "\n").first ?? preview
+    }
+
+    var nsImage: NSImage? {
+        guard let data = imageData else { return nil }
+        return NSImage(data: data)
+    }
+
+    var formattedSize: String {
+        Theme.formatBytes(byteSize)
+    }
+
+    var relativeTime: String {
+        createdAt.relativeShort
     }
 }
