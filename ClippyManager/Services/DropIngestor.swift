@@ -31,7 +31,7 @@ enum DropIngestor {
                     guard let fileURL = url else { return }
                     let size = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
                     DispatchQueue.main.async {
-                        ingestFile(fileURL, size: size, into: storage)
+                        MainActor.assumeIsolated { ingestFile(fileURL, size: size, into: storage) }
                     }
                 }
             } else if provider.canLoadObject(ofClass: NSString.self) {
@@ -50,6 +50,7 @@ enum DropIngestor {
         return handled
     }
 
+    @MainActor
     private static func ingestFile(_ url: URL, size: Int, into storage: StorageManager) {
         // If it's an image file, store the image; otherwise store as a file ref.
         if let type = UTType(filenameExtension: url.pathExtension),

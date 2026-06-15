@@ -3,6 +3,7 @@ import SwiftData
 import AppKit
 
 @Observable
+@MainActor
 final class StorageManager {
     let container: ModelContainer
     private let context: ModelContext
@@ -18,7 +19,10 @@ final class StorageManager {
 
     init(container: ModelContainer) {
         self.container = container
-        self.context = ModelContext(container)
+        // Use the container's main context — the SAME one the views' @Query
+        // observes. A separate context would let inserts merge but leave
+        // per-instance deletes invisible to the UI (delete appeared to no-op).
+        self.context = container.mainContext
         let stored = UserDefaults.standard.integer(forKey: "maxHistoryItems")
         self.maxItems = stored > 0 ? stored : 500
         self.isCapturePaused = UserDefaults.standard.bool(forKey: "isCapturePaused")

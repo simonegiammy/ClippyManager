@@ -59,9 +59,10 @@ final class ClipItem {
         case .image, .screenshot:
             return type == .screenshot ? "Screenshot" : "Image"
         case .file:
-            guard let t = textContent else { return "File" }
-            let first = t.components(separatedBy: "\n").first ?? t
-            return URL(fileURLWithPath: first).lastPathComponent
+            guard let t = textContent, !t.isEmpty else { return "File" }
+            let paths = t.components(separatedBy: "\n").filter { !$0.isEmpty }
+            let first = URL(fileURLWithPath: paths.first ?? t).lastPathComponent
+            return paths.count > 1 ? "\(first) +\(paths.count - 1) more" : first
         case .color:
             return textContent ?? colorHex ?? "Color"
         default:
