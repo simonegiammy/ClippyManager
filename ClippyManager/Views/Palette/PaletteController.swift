@@ -18,6 +18,11 @@ final class PaletteController {
 
     // Data
     var allItems: [ClipItem] = []
+    var customActions: [AIAction] = []     // saved custom prompts
+
+    /// Selection-in-place mode: a single transient clip; accept replaces the
+    /// user's live selection instead of saving to history.
+    var selectionMode: Bool = false
     var search: String = "" { didSet { if focusedIndex >= filtered.count { focusedIndex = max(0, filtered.count - 1) } } }
 
     // Navigation
@@ -31,6 +36,8 @@ final class PaletteController {
     var previewText: String = ""
     var isStreaming: Bool = false
     var previewError: String?
+    var chainTitles: [String] = []     // breadcrumb of applied actions
+    var showChainMenu: Bool = false
     private var runTask: Task<Void, Never>?
 
     // Unavailable teaser
@@ -68,9 +75,12 @@ final class PaletteController {
     }
 
     /// Actions for the focused clip (empty if sensitive or non-actionable type).
+    /// Built-in contextual actions first, then the user's saved custom prompts.
     var actions: [AIAction] {
         guard let item = focusedItem, !item.isSensitive else { return [] }
-        return AIActionCatalog.actions(for: item, destinationBundleID: destinationBundleID)
+        let builtin = AIActionCatalog.actions(for: item, destinationBundleID: destinationBundleID)
+        let custom = customActions.filter { $0.applicableTypes.contains(item.type) }
+        return builtin + custom
     }
 
     var defaultAction: AIAction? { actions.first }
@@ -104,9 +114,25 @@ final class PaletteController {
         case 15: // R
             if cmd, mode == .preview { regenerate(); return true }
             return false
+        case 18, 19, 20, 21, 23, 22, 26, 28, 25: // 1…9
+            if cmd, mode == .browsing {
+                let digits: [UInt16: Int] = [18:0, 19:1, 20:2, 21:3, 23:4, 22:5, 26:6, 28:7, 25:8]
+                if let idx = digits[event.keyCode] { runQuickAction(idx); return true }
+            }
+            return false
         default:
             return false
         }
+    }
+
+    /// Cmd+N → run the Nth action chip on the focused clip.
+    private func runQuickAction(_ index: Int) {
+        guard let item = focusedItem else { return }
+        let list = actions
+        guard list.indices.contains(index) else { return }
+        let action = list[index]
+        let lang = action.requiresLanguageArg ? Self.translateLanguages[0] : nil
+        trigger(action, on: item, language: lang)
     }
 
     /// Returns whether the Return key was consumed.
@@ -203,10 +229,52 @@ final class PaletteController {
             showUnavailable = true
             return
         }
+        AIUsageTracker.record(actionID: action.id, type: item.type,
+                              destinationBundleID: destinationBundleID)
         currentAction = action
         currentLanguage = language ?? (action.requiresLanguageArg ? Self.translateLanguages[0] : nil)
+        chainTitles = [action.title + (currentLanguage.map { " \($0)" } ?? "")]
         mode = .preview
         runStream(action: action, item: item, language: currentLanguage)
+    }
+
+    // MARK: - Chaining (apply another action to the current result)
+
+    /// Actions that can be chained onto the streamed text result.
+    var chainableActions: [AIAction] {
+        AIActionCatalog.all.filter { $0.applicableTypes.contains(.text) && $0.id != currentAction?.id }
+    }
+
+    func chain(_ action: AIAction, language: String? = nil) {
+        guard !previewText.isEmpty else { return }
+        let lang = language ?? (action.requiresLanguageArg ? Self.translateLanguages[0] : nil)
+        if let item = focusedItem {
+            AIUsageTracker.record(actionID: action.id, type: item.type,
+                                  destinationBundleID: destinationBundleID)
+        }
+        currentAction = action
+        currentLanguage = lang
+        chainTitles.append(action.title + (lang.map { " \($0)" } ?? ""))
+        showChainMenu = false
+        runStreamText(action: action, input: previewText, language: lang)
+    }
+
+    private func runStreamText(action: AIAction, input: String, language: String?) {
+        runTask?.cancel()
+        previewText = ""
+        previewError = nil
+        isStreaming = true
+        runTask = Task { @MainActor in
+            do {
+                for try await partial in engine.transform(action: action, text: input, language: language) {
+                    if Task.isCancelled { break }
+                    previewText = partial
+                }
+            } catch {
+                previewError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            }
+            isStreaming = false
+        }
     }
 
     private func runStream(action: AIAction, item: ClipItem, language: String?) {
@@ -239,6 +307,7 @@ final class PaletteController {
         previewText = ""
         previewError = nil
         currentAction = nil
+        chainTitles = []
         mode = .browsing
     }
 

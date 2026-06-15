@@ -50,8 +50,12 @@ final class AIEngine {
     }
 
     /// Transform a clip with an action, yielding partial text as it streams.
-    /// Structured outputs (bullets/table/json) are produced whole, then yielded.
     func transform(action: AIAction, clip: ClipItem, language: String?) -> AsyncThrowingStream<String, Error> {
+        transform(action: action, text: clip.textContent ?? "", language: language)
+    }
+
+    /// Transform arbitrary text with an action (used for chaining on a result).
+    func transform(action: AIAction, text: String, language: String?) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task { @MainActor in
                 #if canImport(FoundationModels)
@@ -59,7 +63,7 @@ final class AIEngine {
                     continuation.finish(throwing: AIEngineError.unavailable); return
                 }
                 do {
-                    try await self.run(action: action, clip: clip, language: language,
+                    try await self.run(action: action, input: text, language: language,
                                        emit: { continuation.yield($0) })
                     continuation.finish()
                 } catch {
@@ -76,12 +80,12 @@ final class AIEngine {
 
     #if canImport(FoundationModels)
     @available(macOS 26, *)
-    private func run(action: AIAction, clip: ClipItem, language: String?,
+    private func run(action: AIAction, input rawInput: String, language: String?,
                      emit: @escaping (String) -> Void) async throws {
         let session = LanguageModelSession()      // fresh context each run
         _session = session
 
-        let input = String((clip.textContent ?? "").prefix(maxInputChars))
+        let input = String(rawInput.prefix(maxInputChars))
         let instruction = action.instruction.replacingOccurrences(of: "{lang}", with: language ?? "English")
         let prompt = "\(instruction)\n\n\"\"\"\n\(input)\n\"\"\""
 

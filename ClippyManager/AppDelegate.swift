@@ -68,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func setupContainer() {
         do {
-            container = try ModelContainer(for: ClipItem.self, Category.self)
+            container = try ModelContainer(for: ClipItem.self, Category.self, CustomPrompt.self)
         } catch {
             fatalError("SwiftData init failed: \(error)")
         }
@@ -99,6 +99,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         hotKeyManager = HotKeyManager(
             onToggle: { [weak self] in
                 DispatchQueue.main.async { self?.togglePastePalette() }
+            },
+            onSelection: { [weak self] in
+                DispatchQueue.main.async { self?.transformSelectionInPlace() }
             },
             onRecent: { [weak self] index in
                 DispatchQueue.main.async { self?.pasteRecent(index) }
@@ -383,6 +386,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             onClose: { [weak self] in self?.closePastePalette() }
         )
         controller.allItems = storageManager.recentItems(limit: 200)
+        controller.customActions = storageManager.customPrompts().map(\.asAction)
 
         let panel = PastePalettePanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 420))
         let root = PastePaletteView(controller: controller)
@@ -410,6 +414,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         palettePanel?.orderOut(nil)
         palettePanel = nil
         removePaletteClickMonitor()
+    }
+
+    // MARK: - Selection-in-place (⌃⌘J)
+
+    private func transformSelectionInPlace() {
+        guard SelectionService.hasAccessibility else {
+            SelectionService.requestAccessibility()
+            return
+        }
+        // Remember the app we'll paste back into.
+        let tracker = SourceAppTracker()
+        tracker.capture()
+        let targetBundleID = tracker.current.bundleID
+
+        SelectionService.readSelection { [weak self] selected in
+            guard let self else { return }
+            guard let text = selected, !text.isEmpty else { return }
+            self.openSelectionPalette(text: text, targetBundleID: targetBundleID)
+        }
+    }
+
+    private func openSelectionPalette(text: String, targetBundleID: String?) {
+        aiAvailability.refresh()
+
+        // A transient clip wrapping the live selection.
+        let transient = ClipItem(type: ContentClassifier().classify(text: text),
+                                 textContent: text, sourceAppName: "Selection",
+                                 sourceAppBundleID: targetBundleID, byteSize: text.utf8.count)
+
+        let controller = PaletteController(
+            availability: aiAvailability,
+            engine: aiEngine,
+            destinationBundleID: targetBundleID,
+            onPasteOriginal: { [weak self] _ in self?.closePastePalette() },  // no-op: keep selection
+            onPasteText: { [weak self] result, _ in
+                self?.closePastePalette()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                    SelectionService.replaceSelection(with: result)
+                }
+            },
+            onClose: { [weak self] in self?.closePastePalette() }
+        )
+        controller.selectionMode = true
+        controller.allItems = [transient]
+        controller.customActions = storageManager.customPrompts().map(\.asAction)
+
+        let panel = PastePalettePanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 420))
+        let root = PastePaletteView(controller: controller).modelContainer(container)
+        let hosting = NSHostingView(rootView: root)
+        hosting.autoresizingMask = [.width, .height]
+        panel.contentView = hosting
+        palettePanel = panel
+
+        panel.positionCentered()
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
+        aiEngine.prewarm()
+
+        removePaletteClickMonitor()
+        paletteClickMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in self?.closePastePalette() }
     }
 
     private func removePaletteClickMonitor() {

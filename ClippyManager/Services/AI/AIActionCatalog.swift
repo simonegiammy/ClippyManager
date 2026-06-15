@@ -62,15 +62,25 @@ enum AIActionCatalog {
     // MARK: - Contextual ordering
 
     /// Actions applicable to the clip, ordered so the best default for the
-    /// destination app comes first.
+    /// destination app comes first. Learned usage nudges frequently-picked
+    /// actions upward without overriding strong contextual rules.
     static func actions(for clip: ClipItem, destinationBundleID: String?) -> [AIAction] {
         let pool = all.filter { $0.applicableTypes.contains(clip.type) }
         let priority = contextPriority(for: clip, destinationBundleID: destinationBundleID)
 
+        // Effective rank = context position minus a usage boost (capped so a
+        // single rule-1 default isn't trivially displaced).
+        func rank(_ a: AIAction) -> Double {
+            let base = Double(priority.firstIndex(of: a.id) ?? 50)
+            let used = AIUsageTracker.score(actionID: a.id, type: clip.type,
+                                            destinationBundleID: destinationBundleID)
+            let boost = min(Double(used), 3.0)   // up to 3 positions
+            return base - boost
+        }
+
         return pool.sorted { a, b in
-            let pa = priority.firstIndex(of: a.id) ?? Int.max
-            let pb = priority.firstIndex(of: b.id) ?? Int.max
-            if pa != pb { return pa < pb }
+            let ra = rank(a), rb = rank(b)
+            if ra != rb { return ra < rb }
             return a.title < b.title
         }
     }

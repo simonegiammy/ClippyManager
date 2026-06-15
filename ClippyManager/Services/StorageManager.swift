@@ -95,6 +95,24 @@ final class StorageManager {
         save()
     }
 
+    // MARK: - Custom prompts (saved AI actions)
+
+    func customPrompts() -> [CustomPrompt] {
+        let d = FetchDescriptor<CustomPrompt>(sortBy: [SortDescriptor(\CustomPrompt.order)])
+        return (try? context.fetch(d)) ?? []
+    }
+
+    func addCustomPrompt(title: String, instruction: String) {
+        let order = customPrompts().count
+        context.insert(CustomPrompt(title: title, instruction: instruction, order: order))
+        save()
+    }
+
+    func deleteCustomPrompt(_ p: CustomPrompt) {
+        context.delete(p)
+        save()
+    }
+
     private func seedDefaultCategoriesIfNeeded() {
         // Seed only on a genuinely fresh store (no categories AND no clips), so
         // categories the user later deletes are never resurrected.

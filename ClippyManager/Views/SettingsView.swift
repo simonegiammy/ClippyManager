@@ -13,6 +13,8 @@ struct SettingsView: View {
     @State private var launchAtLogin = false
     @State private var maxItems: Double = 500
     @State private var showClearConfirm = false
+    @State private var showAddPrompt = false
+    @State private var promptsRefresh = 0   // bump to re-read prompts after edits
 
     var onOpenUpgrade: () -> Void = {}
 
@@ -59,6 +61,8 @@ struct SettingsView: View {
                 }
 
                 aiSection
+
+                promptsSection
 
                 section("Shortcuts") {
                     shortcutRow("Open the paste palette", keys: ["⌃", "⌘", "V"])
@@ -115,6 +119,12 @@ struct SettingsView: View {
         .frame(width: 380, height: 560)
         .background(Theme.panelBackground)
         .environment(\.colorScheme, .dark)
+        .sheet(isPresented: $showAddPrompt) {
+            AddPromptSheet { title, instruction in
+                storage.addCustomPrompt(title: title, instruction: instruction)
+                promptsRefresh += 1
+            }
+        }
         .onAppear {
             launchAtLogin = (SMAppService.mainApp.status == .enabled)
             maxItems = Double(storage.maxItems)
@@ -122,6 +132,43 @@ struct SettingsView: View {
     }
 
     // MARK: - Pieces
+
+    private var promptsSection: some View {
+        section("Custom Prompts") {
+            let prompts = storage.customPrompts()
+            let _ = promptsRefresh   // dependency to refresh after add/delete
+            if prompts.isEmpty {
+                Text("Save your own AI actions (e.g. “Rewrite in my email style”). They appear in the ⌃⌘V action menu.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ForEach(prompts) { p in
+                    HStack {
+                        Image(systemName: "wand.and.stars.inverse")
+                            .font(.system(size: 11)).foregroundStyle(Theme.accent)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(p.title).font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Theme.textPrimary)
+                            Text(p.instruction).font(.system(size: 10))
+                                .foregroundStyle(Theme.textTertiary).lineLimit(1)
+                        }
+                        Spacer()
+                        Button {
+                            storage.deleteCustomPrompt(p); promptsRefresh += 1
+                        } label: {
+                            Image(systemName: "trash").font(.system(size: 11)).foregroundStyle(.red)
+                        }.buttonStyle(.plain)
+                    }
+                }
+            }
+            Button { showAddPrompt = true } label: {
+                Label("Add prompt", systemImage: "plus.circle")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.accent)
+            }.buttonStyle(.plain)
+        }
+    }
 
     private var aiSection: some View {
         section("AI Actions") {

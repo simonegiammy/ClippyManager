@@ -30,6 +30,17 @@ saved so the original is never lost. Everything runs **100% on your Mac** via Ap
 on-device Foundation Models. Actions are clip-bound and contextual: the suggested default
 adapts to the clip type **and** the app you're pasting into.
 
+**Power features:**
+- **⌘1–9** run the Nth action chip instantly; the palette **learns** which actions you pick
+  per clip-type × destination and floats them up over time.
+- **Chaining** — in the preview, hit **Then…** to pipe the result through another action
+  (Summarize → Translate → paste). The breadcrumb shows the chain.
+- **Custom prompts** — save your own actions ("Rewrite in my email style") in Settings;
+  they appear in the palette action menu.
+- **⌃⌘J — transform selection in place**: select text in any app, press the hotkey, pick an
+  action, and the result **replaces your selection** (no history round-trip). Needs
+  Accessibility permission; falls back gracefully.
+
 ![Paste palette](docs/palette.png)
 
 **No Apple Intelligence yet?** The palette still works as a fast keyboard paste tool, and AI
@@ -120,7 +131,9 @@ so enabling enforcement later is seamless.
 |---|---|
 | `⌃⌘V` | Open the keyboard-first paste palette (with AI actions) |
 | `↩` / `⌘↩` / `→` | In palette: paste original / run default AI action / open action menu |
-| `⌘R` · `esc` | In AI preview: regenerate · revert to the clip |
+| `⌘1` … `⌘9` | In palette: run the Nth action chip on the focused clip |
+| `⌘R` · `⌘↩` · `esc` | In AI preview: regenerate · paste result · revert |
+| `⌃⌘J` | Transform the current selection in place (any app) |
 | `⌃⌘0` … `⌃⌘9` | Paste the Nth most-recent clip into the frontmost app* |
 | hover / drag notch | Open the horizontal shelf (peek / drop-to-save) |
 
@@ -180,8 +193,10 @@ ClippyManager/
 │       ├── AIAvailability.swift # 3-layer status + deep-link guidance (macOS 26)
 │       ├── AIAction.swift       # clip-bound action model
 │       ├── AIActionCatalog.swift# catalog + contextual ordering (type × app)
-│       ├── AIEngine.swift       # LanguageModelSession: prewarm, stream, structured
+│       ├── AIEngine.swift       # LanguageModelSession: prewarm, stream, structured, chaining
+│       ├── AIUsageTracker.swift # learns action preferences (type × app bucket)
 │       └── GeneratedOutputs.swift # @Generable bullets / table
+│   ├── SelectionService.swift   # ⌃⌘J read/replace selection (Accessibility)
 ├── Views/Palette/               # keyboard-first ⌃⌘V paste palette
 │   ├── PaletteController.swift  # state machine + 3-key handling
 │   ├── PastePaletteView.swift · PaletteRowView · ActionBarView

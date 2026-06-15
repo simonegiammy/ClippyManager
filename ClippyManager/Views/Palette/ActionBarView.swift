@@ -15,7 +15,7 @@ struct ActionBarView: View {
                 .foregroundStyle(locked ? Theme.textTertiary : Theme.accent)
 
             ForEach(Array(actions.prefix(4).enumerated()), id: \.element.id) { idx, action in
-                chip(action, isDefault: idx == 0)
+                chip(action, isDefault: idx == 0, number: idx + 1)
             }
 
             if actions.count > 4 {
@@ -46,13 +46,18 @@ struct ActionBarView: View {
         .background(Color.white.opacity(0.04))
     }
 
-    private func chip(_ action: AIAction, isDefault: Bool) -> some View {
+    private func chip(_ action: AIAction, isDefault: Bool, number: Int) -> some View {
         Button { onPick(action) } label: {
             HStack(spacing: 4) {
                 Image(systemName: locked ? "lock.fill" : action.systemImage)
                     .font(.system(size: 9, weight: .medium))
                 Text(action.title)
                     .font(.system(size: 11, weight: isDefault ? .semibold : .regular))
+                if !locked {
+                    Text("⌘\(number)")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(isDefault ? .white.opacity(0.7) : Theme.textTertiary)
+                }
             }
             .padding(.horizontal, 9).padding(.vertical, 5)
             .background(

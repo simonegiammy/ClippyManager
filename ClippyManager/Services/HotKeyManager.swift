@@ -2,11 +2,13 @@ import Carbon.HIToolbox
 import Foundation
 
 /// Registers global hotkeys via Carbon (sandbox-safe, no Accessibility needed):
-///   • ⌃⌘V        → toggle the shelf
+///   • ⌃⌘V        → toggle the paste palette
+///   • ⌃⌘J        → transform the current selection in place
 ///   • ⌃⌘0…9      → paste the Nth most recent clip
 private final class HotKeyDispatch {
     static let shared = HotKeyDispatch()
     var onToggle: (() -> Void)?
+    var onSelection: (() -> Void)?
     var onRecent: ((Int) -> Void)?
 }
 
@@ -21,6 +23,8 @@ private func carbonHotKeyHandler(
                       MemoryLayout<EventHotKeyID>.size, nil, &hkID)
     if hkID.id == 1 {
         HotKeyDispatch.shared.onToggle?()
+    } else if hkID.id == 2 {
+        HotKeyDispatch.shared.onSelection?()
     } else if hkID.id >= 100 && hkID.id <= 109 {
         HotKeyDispatch.shared.onRecent?(Int(hkID.id) - 100)
     }
@@ -31,8 +35,11 @@ final class HotKeyManager {
     private var hotKeyRefs: [EventHotKeyRef?] = []
     private var handlerRef: EventHandlerRef?
 
-    init(onToggle: @escaping () -> Void, onRecent: @escaping (Int) -> Void) {
+    init(onToggle: @escaping () -> Void,
+         onSelection: @escaping () -> Void,
+         onRecent: @escaping (Int) -> Void) {
         HotKeyDispatch.shared.onToggle = onToggle
+        HotKeyDispatch.shared.onSelection = onSelection
         HotKeyDispatch.shared.onRecent = onRecent
     }
 
@@ -45,8 +52,11 @@ final class HotKeyManager {
 
         let mods = UInt32(controlKey | cmdKey)
 
-        // ⌃⌘V → toggle
+        // ⌃⌘V → toggle palette
         registerKey(keyCode: UInt32(kVK_ANSI_V), modifiers: mods, id: 1)
+
+        // ⌃⌘J → transform current selection in place
+        registerKey(keyCode: UInt32(kVK_ANSI_J), modifiers: mods, id: 2)
 
         // ⌃⌘0…9 → recent
         let digitKeys: [(Int, Int)] = [
@@ -72,6 +82,7 @@ final class HotKeyManager {
         hotKeyRefs.forEach { if let r = $0 { UnregisterEventHotKey(r) } }
         hotKeyRefs.removeAll()
         if let h = handlerRef { RemoveEventHandler(h); handlerRef = nil }
+        HotKeyDispatch.shared.onSelection = nil
         HotKeyDispatch.shared.onToggle = nil
         HotKeyDispatch.shared.onRecent = nil
     }

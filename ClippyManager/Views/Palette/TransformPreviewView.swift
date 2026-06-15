@@ -18,10 +18,12 @@ struct TransformPreviewView: View {
         HStack(spacing: 8) {
             if let a = controller.currentAction {
                 Image(systemName: a.systemImage).foregroundStyle(Theme.accent)
-                Text(a.title + (controller.currentLanguage.map { " \($0)" } ?? ""))
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.textPrimary)
             }
+            // Chain breadcrumb (e.g. Summarize → Translate Italian)
+            Text(controller.chainTitles.joined(separator: " → "))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
             Spacer()
             // The single, real differentiator — shown right at transform time.
             HStack(spacing: 4) {
@@ -76,6 +78,20 @@ struct TransformPreviewView: View {
             }
             .buttonStyle(.plain).foregroundStyle(Theme.textSecondary)
             .disabled(controller.isStreaming)
+
+            // Chain another action onto this result.
+            Menu {
+                ForEach(controller.chainableActions) { action in
+                    Button {
+                        controller.chain(action)
+                    } label: { Label(action.title, systemImage: action.systemImage) }
+                }
+            } label: {
+                Label("Then…", systemImage: "arrow.turn.down.right").font(.system(size: 11))
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .disabled(controller.isStreaming || controller.previewText.isEmpty)
 
             Spacer()
 

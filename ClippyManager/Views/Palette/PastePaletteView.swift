@@ -58,13 +58,20 @@ struct PastePaletteView: View {
 
     private var searchBar: some View {
         HStack(spacing: 9) {
-            Image(systemName: "magnifyingglass")
+            Image(systemName: controller.selectionMode ? "text.cursor" : "magnifyingglass")
                 .font(.system(size: 13)).foregroundStyle(Theme.textTertiary)
-            TextField("Search clipboard, then ↩ paste · ⌘↩ AI", text: $controller.search)
-                .textFieldStyle(.plain)
-                .font(.system(size: 15))
-                .foregroundStyle(Theme.textPrimary)
-                .focused($searchFocused)
+            if controller.selectionMode {
+                Text("Transform selection · pick an action, ⌘↩ for default")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                TextField("Search clipboard, then ↩ paste · ⌘↩ AI", text: $controller.search)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Theme.textPrimary)
+                    .focused($searchFocused)
+            }
             if controller.availability.actionsActive {
                 Label("AI on-device", systemImage: "sparkles")
                     .font(.system(size: 10, weight: .medium))
