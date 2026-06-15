@@ -50,7 +50,7 @@ struct AddPromptSheet: View {
         }
         .padding(20)
         .frame(width: 360)
-        .background(Theme.panelBackground)
+        .background(AuroraBackground())
         .environment(\.colorScheme, .dark)
     }
 }

@@ -35,17 +35,8 @@ enum ClipItemType: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    var accentColor: Color {
-        switch self {
-        case .text:       Color(red: 0.6, green: 0.6, blue: 0.65)
-        case .link:       Color(red: 0.2, green: 0.55, blue: 1.0)
-        case .code:       Color(red: 0.65, green: 0.45, blue: 1.0)
-        case .color:      Color(red: 1.0, green: 0.6, blue: 0.2)
-        case .image:      Color(red: 0.1, green: 0.75, blue: 0.6)
-        case .file:       Color(red: 0.55, green: 0.6, blue: 0.7)
-        case .screenshot: Color(red: 1.0, green: 0.35, blue: 0.5)
-        }
-    }
+    /// Aurora Glass per-type accent (delegates to the theme).
+    var accentColor: Color { Theme.typeColor(self) }
 
     /// Whether this type renders as a visual (image-like) card.
     var isVisual: Bool {

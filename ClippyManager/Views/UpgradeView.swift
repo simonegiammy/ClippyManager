@@ -29,7 +29,7 @@ struct UpgradeView: View {
         }
         .padding(24)
         .frame(width: 360)
-        .background(Theme.panelBackground)
+        .background(AuroraBackground())
         .environment(\.colorScheme, .dark)
         .task { await store.loadProduct() }
     }

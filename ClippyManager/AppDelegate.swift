@@ -209,7 +209,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func openShelf() {
-        let panel = shelfPanel ?? makeShelfPanel()
+        // Rebuild each time so the genie grow animation replays on every open.
+        let panel = makeShelfPanel()
         shelfPanel = panel
         panel.positionUnderNotch()
         NSApp.activate(ignoringOtherApps: true)
@@ -226,11 +227,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func closeShelf() {
         shelfPanel?.orderOut(nil)
+        shelfPanel = nil
         removeClickMonitor()
     }
 
     private func makeShelfPanel() -> ShelfPanel {
-        let panel = ShelfPanel(contentRect: NSRect(x: 0, y: 0, width: 720, height: 230))
+        let panel = ShelfPanel(contentRect: NSRect(x: 0, y: 0, width: 720, height: 250))
         panel.appearance = NSAppearance(named: .darkAqua)
         let root = ShelfView(
             onOpenLibrary: { [weak self] in self?.closeShelf(); self?.openLibrary() },

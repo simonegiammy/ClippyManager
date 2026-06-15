@@ -41,8 +41,11 @@ struct LibraryView: View {
                     .transition(.move(edge: .trailing))
             }
         }
-        .background(Theme.panelBackground)
-        .frame(minWidth: 720, minHeight: 480)
+        .glassPanel(cornerRadius: 16)        // the whole window is one glass card…
+        .padding(22)                         // …floating on the aurora desktop
+        .background(AuroraBackground())
+        .frame(minWidth: 760, minHeight: 520)
+        .environment(\.colorScheme, .dark)
         .sheet(isPresented: $showAddCategory) {
             AddCategorySheet().environment(storage)
         }
@@ -63,6 +66,12 @@ struct LibraryView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Circle().fill(Color(hex: "#FF5F57")!).frame(width: 12, height: 12)
+                Circle().fill(Color(hex: "#FEBC2E")!).frame(width: 12, height: 12)
+                Circle().fill(Color(hex: "#28C840")!).frame(width: 12, height: 12)
+            }
+            ClippyGlyph(size: 22)
             Text("Library")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(Theme.textPrimary)

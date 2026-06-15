@@ -7,8 +7,20 @@ struct PastePaletteView: View {
     @Bindable var controller: PaletteController
     @FocusState private var searchFocused: Bool
     @State private var keyMonitor: Any?
+    @State private var appeared = false
 
     var body: some View {
+        panel
+            // Genie grow: scales up from the top edge with a springy overshoot,
+            // echoing the notch shelf's "drop" feel.
+            .scaleEffect(x: appeared ? 1 : 0.88, y: appeared ? 1 : 0.6, anchor: .top)
+            .opacity(appeared ? 1 : 0)
+            .onAppear {
+                withAnimation(.timingCurve(0.34, 1.32, 0.42, 1, duration: 0.5)) { appeared = true }
+            }
+    }
+
+    private var panel: some View {
         VStack(spacing: 0) {
             searchBar
             Divider().overlay(Theme.cardBorder)

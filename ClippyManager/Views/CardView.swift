@@ -20,15 +20,15 @@ struct CardView: View {
 
             footer
         }
-        .background(Theme.cardBackground)
+        .background(isHovered ? Theme.cardBackgroundHover : Theme.cardBackground)
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.cardRadius)
+            RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous)
                 .stroke(isSelected ? Theme.selection : Theme.cardBorder,
-                        lineWidth: isSelected ? 2 : 0.5)
+                        lineWidth: isSelected ? 2 : 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius))
-        .scaleEffect(isHovered ? 1.015 : 1.0)
-        .shadow(color: .black.opacity(isHovered ? 0.35 : 0), radius: 10, y: 4)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
+        .scaleEffect(isHovered ? 1.02 : 1.0)
+        .shadow(color: Theme.accentDeep.opacity(isHovered ? 0.25 : 0), radius: 14, y: 6)
         .onHover { isHovered = $0 }
         .animation(.easeOut(duration: 0.12), value: isHovered)
         .animation(.easeOut(duration: 0.12), value: isSelected)

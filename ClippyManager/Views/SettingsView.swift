@@ -117,7 +117,7 @@ struct SettingsView: View {
             .padding(22)
         }
         .frame(width: 380, height: 560)
-        .background(Theme.panelBackground)
+        .background(AuroraBackground())
         .environment(\.colorScheme, .dark)
         .sheet(isPresented: $showAddPrompt) {
             AddPromptSheet { title, instruction in

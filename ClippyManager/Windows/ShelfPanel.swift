@@ -15,22 +15,23 @@ final class ShelfPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         backgroundColor = .clear
         isOpaque = false
-        hasShadow = true
+        hasShadow = false   // the SwiftUI NotchShape carries its own shadow
         isMovableByWindowBackground = false
         hidesOnDeactivate = false
-        animationBehavior = .utilityWindow
+        animationBehavior = .none   // we animate the grow ourselves in SwiftUI
     }
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
-    /// Position the panel centered horizontally, just under the menu bar / notch.
+    /// Pin the panel to the very top, centered on the notch — its pill aligns
+    /// with the physical notch and the body grows down from there.
     func positionUnderNotch() {
         guard let screen = NSScreen.main else { return }
-        let visible = screen.visibleFrame
+        let full = screen.frame
         let size = frame.size
-        let x = visible.midX - size.width / 2
-        let y = visible.maxY - size.height - 8
+        let x = full.midX - size.width / 2
+        let y = full.maxY - size.height   // top edge flush with the screen top
         setFrameOrigin(NSPoint(x: x, y: y))
     }
 }

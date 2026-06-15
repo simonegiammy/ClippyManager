@@ -1,8 +1,24 @@
 # ClippyManager
 
-A beautiful, privacy-first **visual clipboard manager** for macOS. Lives in your menu bar and at the notch — remembers everything you copy as a searchable, glassmorphic timeline of cards, and reshapes it with **on-device AI**.
+A beautiful, privacy-first **visual clipboard manager** for macOS. Lives in your menu bar and at the notch — remembers everything you copy as a searchable, **Aurora Glass** timeline of cards, and reshapes it with **on-device AI**.
 
 📖 **New here? Read the [full product guide (PRD.md)](PRD.md)** — every feature in plain English.
+
+## Aurora Glass design
+
+Frosted glass, vibrancy, warm orange accent — the desktop glows through and every
+surface (shelf, palette, library, settings, paywall) speaks the same language.
+
+**The signature move: the shelf grows from the notch.** Open it and it doesn't fade
+in — a single continuous shape **drops out of the notch pill** (200px, concave
+shoulders) and grows downward into the panel, with a springy overshoot. It reads as
+a physical extension of the notch, never a detached bar.
+
+![Notch grow animation](docs/notch-animation.png)
+
+*The grow stages — from the bare notch pill (0%) to the full panel (100%).*
+
+![Aurora app icon](docs/icon-aurora.png)
 
 > Inspired by the lovely [Supaste](https://www.supaste.com). Independent, open-source, built from scratch.
 

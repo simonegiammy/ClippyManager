@@ -15,11 +15,17 @@ struct ShelfView: View {
     @State private var copiedID: UUID? = nil
     @State private var isDropTargeted = false
     @State private var leaveWork: DispatchWorkItem?
+    @State private var growth: CGFloat = 0   // 0 closed (pill) → 1 open (panel)
 
     var onOpenLibrary: () -> Void
     var onClose: () -> Void
     var onOpenUpgrade: () -> Void = {}
     var shouldAutoCloseOnLeave: () -> Bool = { false }
+
+    // Panel size — the menu band at top is where the notch pill lives.
+    private let panelWidth: CGFloat = 720
+    private let panelHeight: CGFloat = 250
+    private let menuBand: CGFloat = 34
 
     private var filtered: [ClipItem] {
         filter.apply(to: allItems, categories: categories)
@@ -36,24 +42,25 @@ struct ShelfView: View {
     }
 
     var body: some View {
-        VStack(spacing: 10) {
-            topBar
-            if license.isLocked {
-                lockedState
-            } else {
-                CategoryTabsView(filter: filter, categories: categories,
-                                 counts: counts, onAddCategory: { showAddCategory = true })
-                cards
-            }
+        ZStack(alignment: .top) {
+            // 1. The glass body, clipped to the notch shape that GROWS from the
+            //    pill. This is the "genie / drop" — one continuous form from the notch.
+            glassBody
+                .frame(width: panelWidth, height: panelHeight)
+                .clipShape(NotchShape(progress: growth, menuBand: menuBand))
+                .overlay(
+                    NotchShape(progress: growth, menuBand: menuBand)
+                        .stroke(Theme.accent, lineWidth: isDropTargeted ? 2.5 : 0)
+                )
+                .shadow(color: .black.opacity(0.55), radius: 30, y: 18)
+
+            // 2. Content fades in only once mostly grown.
+            content
+                .frame(width: panelWidth, height: panelHeight)
+                .opacity(growth > 0.6 ? Double((growth - 0.6) / 0.4) : 0)
+                .allowsHitTesting(growth > 0.9)
         }
-        .padding(14)
-        .frame(width: 720, height: 230)
-        .glassPanel()
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.panelRadius)
-                .stroke(Theme.accent, lineWidth: isDropTargeted ? 2.5 : 0)
-                .animation(.easeOut(duration: 0.12), value: isDropTargeted)
-        )
+        .frame(width: panelWidth, height: panelHeight)
         .overlay(dropHint)
         .onDrop(of: [.image, .fileURL, .text, .plainText],
                 isTargeted: $isDropTargeted) { providers in
@@ -64,6 +71,37 @@ struct ShelfView: View {
         .sheet(isPresented: $showAddCategory) {
             AddCategorySheet().environment(storage)
         }
+        .onAppear {
+            growth = 0
+            withAnimation(.timingCurve(0.34, 1.32, 0.42, 1, duration: 0.55)) { growth = 1 }
+        }
+    }
+
+    /// The glass fill of the panel (no content) — what the notch shape clips.
+    private var glassBody: some View {
+        LinearGradient(colors: [Theme.glassTop, Theme.glassBottom],
+                       startPoint: .topLeading, endPoint: .bottomTrailing)
+            .background(.ultraThinMaterial)
+            .overlay( // warm aurora bleed inside the glass
+                RadialGradient(colors: [Theme.accent.opacity(0.16), .clear],
+                               center: .init(x: 0.5, y: 0), startRadius: 0, endRadius: 360)
+            )
+    }
+
+    private var content: some View {
+        VStack(spacing: 10) {
+            topBar
+            if license.isLocked {
+                lockedState
+            } else {
+                CategoryTabsView(filter: filter, categories: categories,
+                                 counts: counts, onAddCategory: { showAddCategory = true })
+                cards
+            }
+        }
+        .padding(.top, menuBand + 8)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 14)
     }
 
     /// When the shelf was opened by hovering the notch, close it shortly after
