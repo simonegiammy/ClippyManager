@@ -1,6 +1,8 @@
 # ClippyManager
 
-A beautiful, privacy-first **visual clipboard manager** for macOS. Lives in your menu bar and at the notch — remembers everything you copy as a searchable, glassmorphic timeline of cards.
+A beautiful, privacy-first **visual clipboard manager** for macOS. Lives in your menu bar and at the notch — remembers everything you copy as a searchable, glassmorphic timeline of cards, and reshapes it with **on-device AI**.
+
+📖 **New here? Read the [full product guide (PRD.md)](PRD.md)** — every feature in plain English.
 
 > Inspired by the lovely [Supaste](https://www.supaste.com). Independent, open-source, built from scratch.
 
@@ -37,9 +39,14 @@ adapts to the clip type **and** the app you're pasting into.
   (Summarize → Translate → paste). The breadcrumb shows the chain.
 - **Custom prompts** — save your own actions ("Rewrite in my email style") in Settings;
   they appear in the palette action menu.
+- **Multi-clip batch** — press **space** to multi-select clips, then **Merge & Summarize**,
+  **Combine into list**, or **Deduplicate** across them.
 - **⌃⌘J — transform selection in place**: select text in any app, press the hotkey, pick an
   action, and the result **replaces your selection** (no history round-trip). Needs
   Accessibility permission; falls back gracefully.
+
+> 📖 **Full user guide:** see [PRD.md](PRD.md) — a plain-English booklet of everything
+> ClippyManager can do.
 
 ![Paste palette](docs/palette.png)
 

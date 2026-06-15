@@ -26,6 +26,7 @@
 		4D6DEDFB2B057A0012761814 /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1418BC65740F2B1D071A0BBF /* ClipboardMonitor.swift */; };
 		59A3DF5701C7A414C8D25B1F /* ContentClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6ABD870442D237DC7E6EEE8 /* ContentClassifier.swift */; };
 		5B4A25B7C005B4F4D725BA71 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 73E28C51F95F0B827511C08A /* PrivacyInfo.xcprivacy */; };
+		5D6E82DD833127074490547C /* BatchBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F821853DA66F788DA48F42B9 /* BatchBarView.swift */; };
 		645216C475B5D8CE55EE52F5 /* AIAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 558827C328D71D85C3944B10 /* AIAction.swift */; };
 		68053E97950C23D8606F11F3 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96BACECBD8735C04EE23D705 /* LibraryView.swift */; };
 		75AB4F3BFE730D314701E52B /* StoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8EEB17A82D5F3AED7CD2A3D /* StoreManager.swift */; };
@@ -110,6 +111,7 @@
 		F076EA59373E5AF0467F7CE7 /* PasteService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteService.swift; sourceTree = "<group>"; };
 		F35F14E774F181A5B9016AC5 /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
 		F7CFA20BDA986C0C54BBCB51 /* ActionMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionMenuView.swift; sourceTree = "<group>"; };
+		F821853DA66F788DA48F42B9 /* BatchBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchBarView.swift; sourceTree = "<group>"; };
 		F90217EF518269C1CBAE50A6 /* TransformPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformPreviewView.swift; sourceTree = "<group>"; };
 		FDB99A7908A6CB2D7F0908C5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FDDB999969E106C50D9493F6 /* DropIngestor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropIngestor.swift; sourceTree = "<group>"; };
@@ -168,6 +170,7 @@
 				85146886663E69E1932ED686 /* ActionBarView.swift */,
 				F7CFA20BDA986C0C54BBCB51 /* ActionMenuView.swift */,
 				EC6B1855EAC056EB617C7CBF /* AIUnavailableView.swift */,
+				F821853DA66F788DA48F42B9 /* BatchBarView.swift */,
 				C50341F9835F3792820708DF /* PaletteController.swift */,
 				A99DC7E8D7DC63A28BDD040C /* PaletteRowView.swift */,
 				0A6D603CEE1D014561E57E40 /* PastePaletteView.swift */,
@@ -359,6 +362,7 @@
 				8CAE01FDFDE514998E6ED863 /* AddCategorySheet.swift in Sources */,
 				84E38099E84FD167B5D2CF21 /* AddPromptSheet.swift in Sources */,
 				EE745FE071B4706E96821C0E /* AppDelegate.swift in Sources */,
+				5D6E82DD833127074490547C /* BatchBarView.swift in Sources */,
 				1F06A58942CB9CA04225F622 /* CardView.swift in Sources */,
 				7613B9576A06E0C94A8B4540 /* Category.swift in Sources */,
 				29F00CCC1E87E1C7C2D23BC7 /* CategoryTabsView.swift in Sources */,

@@ -4,9 +4,16 @@ import SwiftUI
 struct PaletteRowView: View {
     let item: ClipItem
     let isFocused: Bool
+    var isSelected: Bool = false
+    var showSelection: Bool = false
 
     var body: some View {
         HStack(spacing: 10) {
+            if showSelection {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 14))
+                    .foregroundStyle(isSelected ? Theme.accent : Theme.textTertiary)
+            }
             sourceBadge
                 .frame(width: 22, height: 22)
 

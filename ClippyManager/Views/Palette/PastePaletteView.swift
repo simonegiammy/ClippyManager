@@ -26,6 +26,12 @@ struct PastePaletteView: View {
                                            controller.handlePick(entry, item: item)
                                        }
                                    })
+                } else if controller.isMultiSelecting {
+                    Divider().overlay(Theme.cardBorder)
+                    BatchBarView(count: controller.selectedClips.count,
+                                 locked: !controller.availability.actionsActive,
+                                 onRun: { controller.runBatch($0) },
+                                 onClear: { controller.clearSelection() })
                 } else if controller.showsActionBar {
                     Divider().overlay(Theme.cardBorder)
                     ActionBarView(actions: controller.actions,
@@ -65,8 +71,13 @@ struct PastePaletteView: View {
                     .font(.system(size: 14))
                     .foregroundStyle(Theme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            } else if controller.isMultiSelecting {
+                Text("Multi-select · space toggles · ⌘1–3 batch action")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                TextField("Search clipboard, then ↩ paste · ⌘↩ AI", text: $controller.search)
+                TextField("Search · ↩ paste · ⌘↩ AI · space to multi-select", text: $controller.search)
                     .textFieldStyle(.plain)
                     .font(.system(size: 15))
                     .foregroundStyle(Theme.textPrimary)
@@ -95,10 +106,22 @@ struct PastePaletteView: View {
                 ScrollView {
                     LazyVStack(spacing: 2) {
                         ForEach(Array(controller.filtered.enumerated()), id: \.element.id) { idx, item in
-                            PaletteRowView(item: item, isFocused: idx == controller.focusedIndex)
+                            PaletteRowView(item: item,
+                                           isFocused: idx == controller.focusedIndex,
+                                           isSelected: controller.selectedIDs.contains(item.id),
+                                           showSelection: controller.isMultiSelecting)
                                 .id(idx)
                                 .contentShape(Rectangle())
-                                .onTapGesture { controller.focusedIndex = idx }
+                                .onTapGesture {
+                                    if controller.isMultiSelecting {
+                                        controller.toggleSelection(of: item)
+                                    } else {
+                                        controller.focusedIndex = idx
+                                    }
+                                }
+                                .simultaneousGesture(TapGesture().modifiers(.command).onEnded {
+                                    controller.toggleSelection(of: item)
+                                })
                         }
                     }
                     .padding(8)

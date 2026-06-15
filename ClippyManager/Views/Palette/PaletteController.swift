@@ -30,6 +30,10 @@ final class PaletteController {
     var focusedIndex: Int = 0
     var actionIndex: Int = 0
 
+    // Multi-select (batch) — set of selected clip ids
+    var selectedIDs: Set<UUID> = []
+    var isMultiSelecting: Bool { !selectedIDs.isEmpty }
+
     // Preview
     var currentAction: AIAction?
     var currentLanguage: String?
@@ -87,8 +91,89 @@ final class PaletteController {
 
     /// Whether AI chips should appear at all (actionable clip present).
     var showsActionBar: Bool {
-        guard let item = focusedItem else { return false }
+        guard !isMultiSelecting, let item = focusedItem else { return false }
         return !item.isSensitive && !actions.isEmpty && availability.userEnabled
+    }
+
+    // MARK: - Multi-select (batch)
+
+    /// The selected clips, in list order, that carry usable text.
+    var selectedClips: [ClipItem] {
+        filtered.filter { selectedIDs.contains($0.id) && ($0.textContent?.isEmpty == false) }
+    }
+
+    func toggleSelection(of item: ClipItem) {
+        if selectedIDs.contains(item.id) { selectedIDs.remove(item.id) }
+        else { selectedIDs.insert(item.id) }
+    }
+
+    func clearSelection() { selectedIDs.removeAll() }
+
+    /// Batch operations available when 2+ clips are selected.
+    enum BatchOp: String, CaseIterable, Identifiable {
+        case mergeSummarize, combineList, deduplicate
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .mergeSummarize: "Merge & Summarize"
+            case .combineList:    "Combine into list"
+            case .deduplicate:    "Deduplicate"
+            }
+        }
+        var systemImage: String {
+            switch self {
+            case .mergeSummarize: "arrow.triangle.merge"
+            case .combineList:    "list.bullet.rectangle"
+            case .deduplicate:    "square.on.square.dashed"
+            }
+        }
+        /// Whether the op needs the on-device model (vs. pure local text op).
+        var needsAI: Bool { self != .deduplicate }
+    }
+
+    func runBatch(_ op: BatchOp) {
+        let clips = selectedClips
+        guard clips.count >= 2 else { return }
+        let joined = clips.compactMap { $0.textContent }.joined(separator: "\n\n")
+
+        switch op {
+        case .deduplicate:
+            // Pure local: drop duplicate lines, preserve order.
+            var seen = Set<String>()
+            let deduped = joined
+                .components(separatedBy: "\n")
+                .filter { line in
+                    let key = line.trimmingCharacters(in: .whitespaces)
+                    if key.isEmpty { return true }
+                    return seen.insert(key).inserted
+                }
+                .joined(separator: "\n")
+            currentAction = nil
+            chainTitles = ["Deduplicate (\(clips.count) clips)"]
+            previewText = deduped
+            previewError = nil
+            isStreaming = false
+            mode = .preview
+
+        case .mergeSummarize, .combineList:
+            guard availability.actionsActive else {
+                teaserAction = AIActionCatalog.all.first { $0.id == "summarize" }
+                showUnavailable = true
+                return
+            }
+            let action = op == .mergeSummarize
+                ? AIAction(id: "batch.summarize", title: "Merge & Summarize",
+                           systemImage: "arrow.triangle.merge", applicableTypes: [.text],
+                           instruction: "Combine and summarize the following clipboard snippets into one coherent summary. Keep the original language.")
+                : AIAction(id: "batch.list", title: "Combine into list",
+                           systemImage: "list.bullet", applicableTypes: [.text], outputKind: .bullets,
+                           instruction: "Combine the following clipboard snippets into one clean, de-duplicated bullet list. Keep the original language.")
+            currentAction = action
+            currentLanguage = nil
+            chainTitles = ["\(op.title) (\(clips.count) clips)"]
+            mode = .preview
+            runStreamText(action: action, input: joined, language: nil)
+        }
     }
 
     // MARK: - Keyboard
@@ -114,10 +199,21 @@ final class PaletteController {
         case 15: // R
             if cmd, mode == .preview { regenerate(); return true }
             return false
+        case 49: // space → toggle multi-select on focused clip (browsing only)
+            if mode == .browsing, !selectionMode, let item = focusedItem {
+                toggleSelection(of: item); return true
+            }
+            return false
         case 18, 19, 20, 21, 23, 22, 26, 28, 25: // 1…9
             if cmd, mode == .browsing {
                 let digits: [UInt16: Int] = [18:0, 19:1, 20:2, 21:3, 23:4, 22:5, 26:6, 28:7, 25:8]
-                if let idx = digits[event.keyCode] { runQuickAction(idx); return true }
+                guard let idx = digits[event.keyCode] else { return false }
+                if isMultiSelecting {
+                    let ops = BatchOp.allCases
+                    if ops.indices.contains(idx) { runBatch(ops[idx]); return true }
+                } else {
+                    runQuickAction(idx); return true
+                }
             }
             return false
         default:
@@ -296,9 +392,14 @@ final class PaletteController {
     }
 
     func regenerate() {
-        guard let action = currentAction, let item = focusedItem else { return }
+        guard let action = currentAction else { return }
         engine.resetSession()
-        runStream(action: action, item: item, language: currentLanguage)
+        if isMultiSelecting {
+            let joined = selectedClips.compactMap { $0.textContent }.joined(separator: "\n\n")
+            runStreamText(action: action, input: joined, language: currentLanguage)
+        } else if let item = focusedItem {
+            runStream(action: action, item: item, language: currentLanguage)
+        }
     }
 
     func revert() {
@@ -312,9 +413,11 @@ final class PaletteController {
     }
 
     func acceptResult() {
-        guard !previewText.isEmpty, let source = focusedItem, let action = currentAction else { return }
+        guard !previewText.isEmpty else { return }
+        // Source clip is the focused one, or the first selected in batch mode.
+        let source = focusedItem ?? selectedClips.first
+        guard let source else { return }
         onPasteText(previewText, source)   // AppDelegate saves derived clip + pastes
-        _ = action
     }
 
     func dismissTeaser() { showUnavailable = false; teaserAction = nil }
