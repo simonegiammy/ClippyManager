@@ -8,37 +8,43 @@ struct BatchBarView: View {
     var onClear: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 7) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 11)).foregroundStyle(Theme.accent)
-            Text("\(count) selected")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 12)).foregroundStyle(Theme.accent)
+            Text("\(count)")
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Theme.textPrimary)
+                .fixedSize()
 
             ForEach(Array(PaletteController.BatchOp.allCases.enumerated()), id: \.element.id) { idx, op in
+                let on = idx == 0 && !(locked && op.needsAI)
                 Button { onRun(op) } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         Image(systemName: (locked && op.needsAI) ? "lock.fill" : op.systemImage)
-                            .font(.system(size: 9, weight: .medium))
-                        Text(op.title).font(.system(size: 11, weight: idx == 0 ? .semibold : .regular))
-                        Text("⌘\(idx + 1)").font(.system(size: 8, weight: .medium))
-                            .foregroundStyle(idx == 0 ? .white.opacity(0.7) : Theme.textTertiary)
+                            .font(.system(size: 10, weight: .medium))
+                        Text(op.title)
+                            .font(.system(size: 12, weight: idx == 0 ? .semibold : .regular))
+                            .lineLimit(1)
                     }
-                    .padding(.horizontal, 9).padding(.vertical, 5)
-                    .background(idx == 0 && !(locked && op.needsAI) ? Theme.accent : Theme.pillInactive,
-                                in: Capsule())
-                    .foregroundStyle(idx == 0 && !(locked && op.needsAI) ? .white : Theme.textSecondary)
+                    .padding(.horizontal, 11).padding(.vertical, 6)
+                    .background(
+                        on ? AnyShapeStyle(LinearGradient(colors: Theme.accentGradient,
+                                                          startPoint: .topLeading, endPoint: .bottomTrailing))
+                           : AnyShapeStyle(Theme.pillInactive),
+                        in: Capsule())
+                    .foregroundStyle(on ? .white : Theme.textSecondary)
+                    .fixedSize()
                 }
                 .buttonStyle(.plain)
+                .help(op.title + " · ⌘\(idx + 1)")
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 4)
 
             Button { onClear() } label: {
-                Text("Clear").font(.system(size: 10)).foregroundStyle(Theme.textTertiary)
+                Text("Clear").font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
             }.buttonStyle(.plain)
         }
-        .padding(.horizontal, 10).padding(.vertical, 7)
-        .background(Theme.accentSoft)
+        .padding(.horizontal, 14).padding(.vertical, 11)
     }
 }
