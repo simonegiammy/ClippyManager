@@ -265,7 +265,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return
         }
 
-        let root = LibraryView(onOpenUpgrade: { [weak self] in self?.openUpgrade() })
+        let root = LibraryView(
+            onOpenUpgrade: { [weak self] in self?.openUpgrade() },
+            onOpenSettings: { [weak self] in self?.openSettings() }
+        )
             .environment(storageManager)
             .environment(licenseManager)
             .environment(storeManager)
@@ -277,6 +280,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         win.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
+        win.backgroundColor = .clear
+        win.isOpaque = false
         win.setContentSize(NSSize(width: 900, height: 560))
         win.center()
         win.isReleasedWhenClosed = false
@@ -319,6 +324,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         win.styleMask = [.titled, .closable, .fullSizeContentView]
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
+        win.backgroundColor = .clear
+        win.isOpaque = false
         win.isReleasedWhenClosed = false
         win.appearance = NSAppearance(named: .darkAqua)
         win.delegate = self
@@ -347,6 +354,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         win.title = "Settings"
         win.styleMask = [.titled, .closable, .fullSizeContentView]
         win.titlebarAppearsTransparent = true
+        win.titleVisibility = .hidden
+        win.backgroundColor = .clear
+        win.isOpaque = false
         win.isReleasedWhenClosed = false
         win.appearance = NSAppearance(named: .darkAqua)
         win.delegate = self

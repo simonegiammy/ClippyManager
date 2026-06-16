@@ -21,6 +21,7 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
+                Color.clear.frame(height: 6)   // clear the transparent titlebar
                 header
 
                 section("General") {
@@ -117,7 +118,7 @@ struct SettingsView: View {
             .padding(22)
         }
         .frame(width: 380, height: 560)
-        .background(AuroraBackground())
+        .background(GlassWindowFill())
         .environment(\.colorScheme, .dark)
         .sheet(isPresented: $showAddPrompt) {
             AddPromptSheet { title, instruction in

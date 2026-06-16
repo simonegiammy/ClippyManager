@@ -27,9 +27,10 @@ struct UpgradeView: View {
             }
             footer
         }
-        .padding(24)
+        .padding(.top, 30)
+        .padding([.horizontal, .bottom], 24)
         .frame(width: 360)
-        .background(AuroraBackground())
+        .background(GlassWindowFill())
         .environment(\.colorScheme, .dark)
         .task { await store.loadProduct() }
     }

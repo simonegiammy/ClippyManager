@@ -133,6 +133,22 @@ struct GlassPanel: ViewModifier {
     }
 }
 
+/// Edge-to-edge frosted glass for a whole window's content (no margin, no fake
+/// chrome — the real macOS window provides the frame & traffic lights).
+struct GlassWindowFill: View {
+    var body: some View {
+        ZStack {
+            Rectangle().fill(.ultraThinMaterial)
+            LinearGradient(colors: [Theme.glassTop, Theme.glassBottom],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            // Subtle warm aurora bleed from the top, kept inside the glass.
+            RadialGradient(colors: [Theme.accent.opacity(0.12), .clear],
+                           center: .init(x: 0.5, y: 0), startRadius: 0, endRadius: 520)
+        }
+        .ignoresSafeArea()
+    }
+}
+
 extension View {
     func glassPanel(cornerRadius: CGFloat = Theme.panelRadius) -> some View {
         modifier(GlassPanel(cornerRadius: cornerRadius))

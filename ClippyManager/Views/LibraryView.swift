@@ -10,6 +10,7 @@ struct LibraryView: View {
     @Query(sort: \Category.order) private var categories: [Category]
 
     var onOpenUpgrade: () -> Void = {}
+    var onOpenSettings: () -> Void = {}
 
     @State private var filter = ClipFilter()
     @State private var selected: ClipItem?
@@ -41,9 +42,7 @@ struct LibraryView: View {
                     .transition(.move(edge: .trailing))
             }
         }
-        .glassPanel(cornerRadius: 16)        // the whole window is one glass card…
-        .padding(22)                         // …floating on the aurora desktop
-        .background(AuroraBackground())
+        .background(GlassWindowFill())       // the window itself IS the glass
         .frame(minWidth: 760, minHeight: 520)
         .environment(\.colorScheme, .dark)
         .sheet(isPresented: $showAddCategory) {
@@ -66,11 +65,6 @@ struct LibraryView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Circle().fill(Color(hex: "#FF5F57")!).frame(width: 12, height: 12)
-                Circle().fill(Color(hex: "#FEBC2E")!).frame(width: 12, height: 12)
-                Circle().fill(Color(hex: "#28C840")!).frame(width: 12, height: 12)
-            }
             ClippyGlyph(size: 22)
             Text("Library")
                 .font(.system(size: 18, weight: .bold))
@@ -96,6 +90,13 @@ struct LibraryView: View {
                     .foregroundStyle(storage.isCapturePaused ? Theme.accent : Theme.textSecondary)
             }
             .buttonStyle(.plain)
+            Button { onOpenSettings() } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .buttonStyle(.plain)
+            .help("Settings")
         }
     }
 
