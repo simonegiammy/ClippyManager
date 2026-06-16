@@ -232,9 +232,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func makeShelfPanel() -> ShelfPanel {
-        let panel = ShelfPanel(contentRect: NSRect(x: 0, y: 0, width: 720, height: 250))
+        let panel = ShelfPanel(contentRect: NSRect(x: 0, y: 0, width: 720, height: 320))
         panel.appearance = NSAppearance(named: .darkAqua)
+        let engine = aiEngine!
+        let avail = aiAvailability!
         let root = ShelfView(
+            engine: engine,
+            availability: avail,
             onOpenLibrary: { [weak self] in self?.closeShelf(); self?.openLibrary() },
             onClose: { [weak self] in self?.closeShelf() },
             onOpenUpgrade: { [weak self] in self?.closeShelf(); self?.openUpgrade() },
