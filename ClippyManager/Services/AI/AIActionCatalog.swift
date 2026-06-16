@@ -8,10 +8,10 @@ enum AIActionCatalog {
     static let all: [AIAction] = [
         // — Text / prose —
         AIAction(id: "summarize", title: "Summarize", systemImage: "text.append",
-                 applicableTypes: [.text, .link], outputKind: .text,
+                 applicableTypes: [.text, .link, .file], outputKind: .text,
                  instruction: "Summarize the following text concisely in 1–3 sentences. Keep the original language. Output only the summary."),
         AIAction(id: "tldr_bullets", title: "Key points", systemImage: "list.bullet",
-                 applicableTypes: [.text, .link], outputKind: .bullets,
+                 applicableTypes: [.text, .link, .file], outputKind: .bullets,
                  instruction: "Extract the key points of the following text as a short bullet list. Keep the original language."),
         AIAction(id: "shorten", title: "Shorten", systemImage: "arrow.down.right.and.arrow.up.left",
                  applicableTypes: [.text], outputKind: .text,
@@ -29,7 +29,7 @@ enum AIActionCatalog {
                  applicableTypes: [.text], outputKind: .text,
                  instruction: "Rewrite the following text so it is simple and easy to understand. Keep the language. Output only the rewritten text."),
         AIAction(id: "translate", title: "Translate…", systemImage: "globe",
-                 applicableTypes: [.text, .link], outputKind: .text,
+                 applicableTypes: [.text, .link, .file], outputKind: .text,
                  instruction: "Translate the following text into {lang}. Output only the translation.",
                  requiresLanguageArg: true),
         AIAction(id: "extract_actions", title: "Extract action items", systemImage: "checklist",

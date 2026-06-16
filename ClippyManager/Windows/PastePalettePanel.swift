@@ -14,7 +14,7 @@ final class PastePalettePanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         backgroundColor = .clear
         isOpaque = false
-        hasShadow = true
+        hasShadow = false   // the SwiftUI rounded shape carries its own shadow
         isMovableByWindowBackground = false
         hidesOnDeactivate = false
         animationBehavior = .utilityWindow

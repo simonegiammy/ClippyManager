@@ -79,13 +79,7 @@ struct ShelfView: View {
 
     /// The glass fill of the panel (no content) — what the notch shape clips.
     private var glassBody: some View {
-        LinearGradient(colors: [Theme.glassTop, Theme.glassBottom],
-                       startPoint: .topLeading, endPoint: .bottomTrailing)
-            .background(.ultraThinMaterial)
-            .overlay( // warm aurora bleed inside the glass
-                RadialGradient(colors: [Theme.accent.opacity(0.16), .clear],
-                               center: .init(x: 0.5, y: 0), startRadius: 0, endRadius: 360)
-            )
+        AuroraGlassSurface()
     }
 
     private var content: some View {

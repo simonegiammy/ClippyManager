@@ -55,21 +55,13 @@ struct PastePaletteView: View {
         }
         .frame(width: 560)
         .frame(minHeight: 360, maxHeight: 520)
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.ultraThinMaterial)
-                LinearGradient(colors: [Theme.glassTop, Theme.glassBottom],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
-                RadialGradient(colors: [Theme.accent.opacity(0.14), .clear],
-                               center: .init(x: 0.5, y: 0), startRadius: 0, endRadius: 420)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        )
+        .background(AuroraGlassSurface())
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.white.opacity(0.14), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.5), radius: 30, y: 16)
+        .shadow(color: .black.opacity(0.4), radius: 26, y: 14)
         .overlay {
             if controller.showUnavailable {
                 ZStack {

@@ -11,10 +11,12 @@ final class AIEngine {
     enum AIEngineError: LocalizedError {
         case unavailable
         case empty
+        case unreadableFile
         var errorDescription: String? {
             switch self {
-            case .unavailable: "On-device AI isn't available on this Mac."
-            case .empty:       "The model returned no output."
+            case .unavailable:    "On-device AI isn't available on this Mac."
+            case .empty:          "The model returned no output."
+            case .unreadableFile: "This file isn't readable text (e.g. a PDF, image, or binary)."
             }
         }
     }
@@ -50,8 +52,36 @@ final class AIEngine {
     }
 
     /// Transform a clip with an action, yielding partial text as it streams.
+    /// For `.file` clips, the file's *text contents* are read and used as input.
     func transform(action: AIAction, clip: ClipItem, language: String?) -> AsyncThrowingStream<String, Error> {
-        transform(action: action, text: clip.textContent ?? "", language: language)
+        if clip.type == .file {
+            guard let fileText = Self.readableText(fromFilePaths: clip.textContent ?? "") else {
+                return AsyncThrowingStream { $0.finish(throwing: AIEngineError.unreadableFile) }
+            }
+            return transform(action: action, text: fileText, language: language)
+        }
+        return transform(action: action, text: clip.textContent ?? "", language: language)
+    }
+
+    /// Reads the contents of the first file path if it's a UTF-8 text document
+    /// (txt, md, csv, json, source code…). Returns nil for binaries/PDF/images.
+    private static func readableText(fromFilePaths paths: String) -> String? {
+        let first = paths.components(separatedBy: "\n").first ?? paths
+        guard !first.isEmpty else { return nil }
+        let url = URL(fileURLWithPath: first)
+        // Only attempt plain-text-ish files.
+        let textExts: Set<String> = ["txt","md","markdown","csv","tsv","json","yaml","yml",
+                                     "xml","html","htm","swift","js","ts","py","rb","go","rs",
+                                     "java","kt","c","cpp","h","sh","log","rtf","tex","srt"]
+        let ext = url.pathExtension.lowercased()
+        if !textExts.isEmpty && !textExts.contains(ext) {
+            // Try anyway only if there's no extension; otherwise bail for binaries.
+            if !ext.isEmpty { return nil }
+        }
+        if let s = try? String(contentsOf: url, encoding: .utf8), !s.isEmpty {
+            return s
+        }
+        return nil
     }
 
     /// Transform arbitrary text with an action (used for chaining on a result).

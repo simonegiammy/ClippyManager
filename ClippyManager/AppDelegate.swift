@@ -248,6 +248,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let hosting = NSHostingView(rootView: root)
         hosting.frame = panel.contentLayoutRect
         hosting.autoresizingMask = [.width, .height]
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = NSColor.clear.cgColor
         panel.contentView = hosting
         return panel
     }
@@ -405,6 +407,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .modelContainer(container)
         let hosting = NSHostingView(rootView: root)
         hosting.autoresizingMask = [.width, .height]
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = NSColor.clear.cgColor
         panel.contentView = hosting
         palettePanel = panel
 
@@ -476,6 +480,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let root = PastePaletteView(controller: controller).modelContainer(container)
         let hosting = NSHostingView(rootView: root)
         hosting.autoresizingMask = [.width, .height]
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = NSColor.clear.cgColor
         panel.contentView = hosting
         palettePanel = panel
 
