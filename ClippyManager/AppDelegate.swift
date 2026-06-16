@@ -9,9 +9,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var storageManager: StorageManager!
     private var clipboardMonitor: ClipboardMonitor!
     private var hotKeyManager: HotKeyManager!
-    private var licenseManager: LicenseManager!
-    private var storeManager: StoreManager!
-    private var upgradeWindow: NSWindow?
     private var settingsWindow: NSWindow?
 
     private var shelfPanel: ShelfPanel?
@@ -40,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         setupHotKeys()
         setupNotchDropZone()
 
+        #if DEBUG
         // Debug-only: open a surface immediately for screenshots/testing.
         if CommandLine.arguments.contains("--open-library") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openLibrary() }
@@ -47,15 +45,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if CommandLine.arguments.contains("--open-shelf") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openShelf() }
         }
-        if CommandLine.arguments.contains("--open-upgrade") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openUpgrade() }
-        }
         if CommandLine.arguments.contains("--open-settings") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.openSettings() }
         }
         if CommandLine.arguments.contains("--open-palette") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.openPastePalette() }
         }
+        #endif
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -73,8 +69,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             fatalError("SwiftData init failed: \(error)")
         }
         storageManager = StorageManager(container: container)
-        licenseManager = LicenseManager()
-        storeManager = StoreManager(license: licenseManager)
         aiAvailability = AIAvailability()
         aiEngine = AIEngine()
     }
@@ -168,12 +162,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         settingsItem.keyEquivalentModifierMask = [.command]
         menu.addItem(settingsItem)
 
-        let statusLine = NSMenuItem(title: licenseManager.statusSummary, action: nil, keyEquivalent: "")
-        statusLine.isEnabled = false
-        menu.addItem(statusLine)
-        let unlockTitle = licenseManager.isPurchased ? "Licensing…" : "Unlock Lifetime / Promo…"
-        menu.addItem(withTitle: unlockTitle, action: #selector(menuOpenUpgrade), keyEquivalent: "")
-
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Clippy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.items.forEach { $0.target = self }
@@ -187,7 +175,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func menuOpenLibrary() { openLibrary() }
     @objc private func menuTogglePause() { storageManager.isCapturePaused.toggle() }
     @objc private func menuOpenSettings() { openSettings() }
-    @objc private func menuOpenUpgrade() { openUpgrade() }
 
     // MARK: - Shelf
 
@@ -241,12 +228,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             availability: avail,
             onOpenLibrary: { [weak self] in self?.closeShelf(); self?.openLibrary() },
             onClose: { [weak self] in self?.closeShelf() },
-            onOpenUpgrade: { [weak self] in self?.closeShelf(); self?.openUpgrade() },
             shouldAutoCloseOnLeave: { [weak self] in self?.shelfHoverActivated ?? false }
         )
         .environment(storageManager)
-        .environment(licenseManager)
-        .environment(storeManager)
         .modelContainer(container)
 
         let hosting = NSHostingView(rootView: root)
@@ -272,12 +256,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
 
         let root = LibraryView(
-            onOpenUpgrade: { [weak self] in self?.openUpgrade() },
             onOpenSettings: { [weak self] in self?.openSettings() }
         )
             .environment(storageManager)
-            .environment(licenseManager)
-            .environment(storeManager)
             .modelContainer(container)
 
         let hosting = NSHostingController(rootView: root)
@@ -301,44 +282,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         let win = notification.object as? NSWindow
-        guard win === libraryWindow || win === upgradeWindow || win === settingsWindow else { return }
-        if win === upgradeWindow { upgradeWindow = nil }
+        guard win === libraryWindow || win === settingsWindow else { return }
         if win === settingsWindow { settingsWindow = nil }
         // Return to menu-bar-only mode when no managed window remains open.
         let anyVisible = (libraryWindow?.isVisible == true) ||
-                         (upgradeWindow?.isVisible == true) ||
                          (settingsWindow?.isVisible == true)
         if !anyVisible { NSApp.setActivationPolicy(.accessory) }
-    }
-
-    // MARK: - Upgrade / licensing window
-
-    private func openUpgrade() {
-        NSApp.setActivationPolicy(.regular)
-        if let win = upgradeWindow {
-            NSApp.activate(ignoringOtherApps: true)
-            win.makeKeyAndOrderFront(nil)
-            return
-        }
-        let root = UpgradeView(onClose: { [weak self] in self?.upgradeWindow?.close() })
-            .environment(licenseManager)
-            .environment(storeManager)
-
-        let hosting = NSHostingController(rootView: root)
-        let win = NSWindow(contentViewController: hosting)
-        win.title = "Unlock Clippy"
-        win.styleMask = [.titled, .closable, .fullSizeContentView]
-        win.titlebarAppearsTransparent = true
-        win.titleVisibility = .hidden
-        win.backgroundColor = .clear
-        win.isOpaque = false
-        win.isReleasedWhenClosed = false
-        win.appearance = NSAppearance(named: .darkAqua)
-        win.delegate = self
-        win.center()
-        upgradeWindow = win
-        NSApp.activate(ignoringOtherApps: true)
-        win.makeKeyAndOrderFront(nil)
     }
 
     // MARK: - Settings window
@@ -350,9 +299,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             win.makeKeyAndOrderFront(nil)
             return
         }
-        let root = SettingsView(onOpenUpgrade: { [weak self] in self?.openUpgrade() })
+        let root = SettingsView()
             .environment(storageManager)
-            .environment(licenseManager)
             .environment(aiAvailability)
 
         let hosting = NSHostingController(rootView: root)

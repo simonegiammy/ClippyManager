@@ -4,12 +4,10 @@ import SwiftData
 /// The full Library window: searchable grid with date grouping + detail pane.
 struct LibraryView: View {
     @Environment(StorageManager.self) private var storage
-    @Environment(LicenseManager.self) private var license
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClipItem.createdAt, order: .reverse) private var allItems: [ClipItem]
     @Query(sort: \Category.order) private var categories: [Category]
 
-    var onOpenUpgrade: () -> Void = {}
     var onOpenSettings: () -> Void = {}
 
     @State private var filter = ClipFilter()
@@ -73,16 +71,6 @@ struct LibraryView: View {
                           placeholder: "Search your clipboard…")
                 .frame(maxWidth: 320)
             Spacer()
-            Button { onOpenUpgrade() } label: {
-                Label(license.statusSummary,
-                      systemImage: license.isPurchased ? "checkmark.seal.fill" : "sparkles")
-                    .font(.system(size: 11, weight: .medium))
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(license.isPurchased ? Color.green.opacity(0.15) : Theme.accentSoft,
-                                in: Capsule())
-                    .foregroundStyle(license.isPurchased ? .green : Theme.accent)
-            }
-            .buttonStyle(.plain)
             Button { storage.isCapturePaused.toggle() } label: {
                 Label(storage.isCapturePaused ? "Paused" : "Capturing",
                       systemImage: storage.isCapturePaused ? "pause.circle.fill" : "record.circle")

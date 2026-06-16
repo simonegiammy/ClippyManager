@@ -5,7 +5,6 @@ import UniformTypeIdentifiers
 /// The Supaste-style notch shelf: a dark glass horizontal panel with cards.
 struct ShelfView: View {
     @Environment(StorageManager.self) private var storage
-    @Environment(LicenseManager.self) private var license
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClipItem.createdAt, order: .reverse) private var allItems: [ClipItem]
     @Query(sort: \Category.order) private var categories: [Category]
@@ -29,7 +28,6 @@ struct ShelfView: View {
     let availability: AIAvailability
     var onOpenLibrary: () -> Void
     var onClose: () -> Void
-    var onOpenUpgrade: () -> Void = {}
     var shouldAutoCloseOnLeave: () -> Bool = { false }
 
     private var selectedItem: ClipItem? {
@@ -105,9 +103,7 @@ struct ShelfView: View {
     private var content: some View {
         VStack(spacing: 10) {
             topBar
-            if license.isLocked {
-                lockedState
-            } else if aiAction != nil {
+            if aiAction != nil {
                 aiPreview
             } else {
                 CategoryTabsView(filter: filter, categories: categories,
@@ -224,26 +220,6 @@ struct ShelfView: View {
         }
         leaveWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
-    }
-
-    private var lockedState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 26))
-                .foregroundStyle(Theme.accent)
-            Text("Your trial has ended")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.textPrimary)
-            Button { onOpenUpgrade() } label: {
-                Text("Unlock Lifetime — \(LicenseManager.displayPrice)")
-                    .font(.system(size: 12, weight: .semibold))
-                    .padding(.horizontal, 16).padding(.vertical, 8)
-                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 9))
-                    .foregroundStyle(.white)
-            }
-            .buttonStyle(.plain)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
@@ -385,7 +361,7 @@ struct ShelfView: View {
 
     private func runAI(_ action: AIAction) {
         guard let item = selectedItem else { return }
-        guard availability.actionsActive else { onOpenUpgrade(); return }
+        guard availability.actionsActive else { return }   // AI off → chips already locked
         let lang = action.requiresLanguageArg ? "Italian" : nil
         AIUsageTracker.record(actionID: action.id, type: item.type, destinationBundleID: nil)
         aiAction = action

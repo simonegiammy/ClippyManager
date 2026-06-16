@@ -239,7 +239,6 @@ Open from the menu-bar icon → **Settings** (or **⌘,**):
 - **Shortcuts** — a reference of every keyboard shortcut.
 - **Updates** — automatic update check (note: from the App Store, updates are
   automatic anyway).
-- **License** — your trial/lifetime status and unlock.
 - **Data** — clear all history.
 
 ---
@@ -277,11 +276,11 @@ Open from the menu-bar icon → **Settings** (or **⌘,**):
 
 ## 12. Pricing
 
-- A short **free trial**, then a **one-time lifetime purchase** — no subscription.
-- **Promo codes** can unlock it instantly.
-- All features included; all future updates included.
-
-*(Pricing/licensing is currently being finalized for the App Store.)*
+- **One-time purchase on the Mac App Store** — buy once, own forever. No
+  subscription, no in-app purchases, no trial.
+- The App Store handles payment, so **every feature is unlocked from first
+  launch** — there's nothing to unlock or manage inside the app.
+- All future updates included.
 
 ---
 

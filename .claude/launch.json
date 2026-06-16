@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "clippy-landing",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-I", "-c", "import functools; from http.server import SimpleHTTPRequestHandler as H; from socketserver import TCPServer; TCPServer.allow_reuse_address=True; TCPServer(('127.0.0.1',4178), functools.partial(H, directory='/private/tmp/clippy-landing')).serve_forever()"],
+      "port": 4178
+    }
+  ]
+}

@@ -4,7 +4,6 @@ import ServiceManagement
 /// Preferences window. Dark-themed to match the app.
 struct SettingsView: View {
     @Environment(StorageManager.self) private var storage
-    @Environment(LicenseManager.self) private var license
     @Environment(AIAvailability.self) private var ai
 
     @AppStorage("hoverToOpen") private var hoverToOpen = true
@@ -16,7 +15,6 @@ struct SettingsView: View {
     @State private var showAddPrompt = false
     @State private var promptsRefresh = 0   // bump to re-read prompts after edits
 
-    var onOpenUpgrade: () -> Void = {}
 
     var body: some View {
         ScrollView {
@@ -85,19 +83,6 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.accent)
                 }
 
-                section("License") {
-                    HStack {
-                        Label(license.statusSummary,
-                              systemImage: license.isPurchased ? "checkmark.seal.fill" : "sparkles")
-                            .foregroundStyle(license.isPurchased ? .green : Theme.textPrimary)
-                        Spacer()
-                        Button(license.isPurchased ? "Manage" : "Unlock / Promo…") { onOpenUpgrade() }
-                            .buttonStyle(.plain)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Theme.accent)
-                    }
-                    .font(.system(size: 13))
-                }
 
                 section("Data") {
                     Button(role: .destructive) { showClearConfirm = true } label: {
