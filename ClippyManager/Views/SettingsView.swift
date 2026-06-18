@@ -7,7 +7,6 @@ struct SettingsView: View {
     @Environment(AIAvailability.self) private var ai
 
     @AppStorage("hoverToOpen") private var hoverToOpen = true
-    @AppStorage("autoCheckUpdates") private var autoCheckUpdates = true
 
     @State private var launchAtLogin = false
     @State private var maxItems: Double = 500
@@ -68,21 +67,6 @@ struct SettingsView: View {
                     Divider().overlay(Theme.cardBorder)
                     shortcutRow("Paste recent clip", keys: ["⌃", "⌘", "0–9"])
                 }
-
-                section("Updates") {
-                    toggleRow("Automatically check for updates", systemImage: "arrow.triangle.2.circlepath",
-                              isOn: $autoCheckUpdates)
-                    Text("When installed from the Mac App Store, updates are delivered automatically — this setting only applies to direct downloads.")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.textTertiary)
-                    Button("Check for Updates…") {
-                        NSWorkspace.shared.open(URL(string: "https://github.com/simonegiammy/ClippyManager/releases")!)
-                    }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.accent)
-                }
-
 
                 section("Data") {
                     Button(role: .destructive) { showClearConfirm = true } label: {
