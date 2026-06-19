@@ -75,11 +75,12 @@ struct ShelfView: View {
                         .stroke(Theme.accent, lineWidth: isDropTargeted ? 2.5 : 0)
                 )
 
-            // 2. Content fades in only once mostly grown.
+            // 2. Content fades in only once the glass is nearly full, so tabs
+            //    never appear over a still-small panel.
             content
                 .frame(width: panelWidth, height: panelHeight)
-                .opacity(growth > 0.6 ? Double((growth - 0.6) / 0.4) : 0)
-                .allowsHitTesting(growth > 0.9)
+                .opacity(growth > 0.8 ? Double((growth - 0.8) / 0.2) : 0)
+                .allowsHitTesting(growth > 0.95)
         }
         .frame(width: panelWidth, height: panelHeight)
         .overlay(dropHint)
