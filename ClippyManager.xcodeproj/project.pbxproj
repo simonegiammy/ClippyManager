@@ -12,7 +12,6 @@
 		0F937A79BE9FA29700591F03 /* PaletteRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A99DC7E8D7DC63A28BDD040C /* PaletteRowView.swift */; };
 		114DDC956B345CCE52CA7B4E /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35F14E774F181A5B9016AC5 /* StorageManager.swift */; };
 		174AADEBCD675DFA995A2532 /* AIActionCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7206A5136EAA2FA17B0769F /* AIActionCatalog.swift */; };
-		17BDFCDFDF71403B2CE6B04E /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = C233581302C48749BA3A3DBA /* AppIcon.icns */; };
 		17F98FA97486C7AECFED45C1 /* SourceAppTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 287126468190BE4D2B77F2E1 /* SourceAppTracker.swift */; };
 		1F06A58942CB9CA04225F622 /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6868CD5130EA9827E102450 /* CardView.swift */; };
 		2072CB128ACC1EC58C7A49AD /* SearchBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE97497721F2E9CA0CD7CC28 /* SearchBarView.swift */; };
@@ -97,7 +96,6 @@
 		B6868CD5130EA9827E102450 /* CardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardView.swift; sourceTree = "<group>"; };
 		B90D38E7DB7A141C7326257E /* ShelfView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfView.swift; sourceTree = "<group>"; };
 		BBCE3EA6B7AEDCBB171BD0D5 /* NotchDropZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchDropZone.swift; sourceTree = "<group>"; };
-		C233581302C48749BA3A3DBA /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		C50341F9835F3792820708DF /* PaletteController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteController.swift; sourceTree = "<group>"; };
 		C5D4795C8C56F0EC06CC1306 /* AddPromptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPromptSheet.swift; sourceTree = "<group>"; };
 		C9BEEC1F1545233884C84891 /* SelectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionService.swift; sourceTree = "<group>"; };
@@ -255,7 +253,6 @@
 		E4BC87FEBD43C189BA02914B /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				C233581302C48749BA3A3DBA /* AppIcon.icns */,
 				FDB99A7908A6CB2D7F0908C5 /* Assets.xcassets */,
 				73E28C51F95F0B827511C08A /* PrivacyInfo.xcprivacy */,
 			);
@@ -341,7 +338,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				17BDFCDFDF71403B2CE6B04E /* AppIcon.icns in Resources */,
 				A1E2F4CBDE2155682CE02687 /* Assets.xcassets in Resources */,
 				5B4A25B7C005B4F4D725BA71 /* PrivacyInfo.xcprivacy in Resources */,
 			);
