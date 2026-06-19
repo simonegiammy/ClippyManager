@@ -50,6 +50,39 @@ enum DropIngestor {
         return handled
     }
 
+    /// Ingest a drop received by an AppKit view (the notch drop zone), reading
+    /// directly from the dragging pasteboard. Returns true if anything was saved.
+    @MainActor
+    @discardableResult
+    static func ingest(pasteboard pb: NSPasteboard, into storage: StorageManager) -> Bool {
+        // 1. File URLs (files & folders)
+        if let urls = pb.readObjects(forClasses: [NSURL.self],
+                                     options: [.urlReadingFileURLsOnly: true]) as? [URL],
+           !urls.isEmpty {
+            for url in urls {
+                let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+                ingestFile(url, size: size, into: storage)
+            }
+            return true
+        }
+        // 2. Image data
+        if let image = NSImage(pasteboard: pb),
+           let tiff = image.tiffRepresentation,
+           let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+            storage.add(ClipItem(type: .image, imageData: png,
+                                 sourceAppName: "Dropped", byteSize: png.count))
+            return true
+        }
+        // 3. Plain text / links
+        if let text = pb.string(forType: .string), !text.isEmpty {
+            let type = ContentClassifier().classify(text: text)
+            storage.add(ClipItem(type: type, textContent: text,
+                                 sourceAppName: "Dropped", byteSize: text.utf8.count))
+            return true
+        }
+        return false
+    }
+
     @MainActor
     private static func ingestFile(_ url: URL, size: Int, into storage: StorageManager) {
         // If it's an image file, store the image; otherwise store as a file ref.

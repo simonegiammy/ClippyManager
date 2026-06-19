@@ -7,8 +7,10 @@ import UniformTypeIdentifiers
 final class NotchDropZone: NSPanel {
     private let zoneView: DropZoneView
 
-    init(onDragEnter: @escaping () -> Void, onHover: @escaping () -> Void) {
-        zoneView = DropZoneView(onDragEnter: onDragEnter, onHover: onHover)
+    init(onDragEnter: @escaping () -> Void,
+         onHover: @escaping () -> Void,
+         onDrop: @escaping (NSPasteboard) -> Bool) {
+        zoneView = DropZoneView(onDragEnter: onDragEnter, onHover: onHover, onDrop: onDrop)
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 220, height: 36),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -51,15 +53,18 @@ final class NotchDropZone: NSPanel {
 private final class DropZoneView: NSView {
     private let onDragEnter: () -> Void
     private let onHover: () -> Void
+    private let onDrop: (NSPasteboard) -> Bool
     var isHoverEnabled = true
 
     private var isTargeted = false { didSet { needsDisplay = true } }
     private var isMouseInside = false { didSet { needsDisplay = true } }
     private var hoverWork: DispatchWorkItem?
 
-    init(onDragEnter: @escaping () -> Void, onHover: @escaping () -> Void) {
+    init(onDragEnter: @escaping () -> Void, onHover: @escaping () -> Void,
+         onDrop: @escaping (NSPasteboard) -> Bool) {
         self.onDragEnter = onDragEnter
         self.onHover = onHover
+        self.onDrop = onDrop
         super.init(frame: .zero)
         registerForDraggedTypes([
             .fileURL, .png, .tiff, .string,
@@ -113,6 +118,14 @@ private final class DropZoneView: NSView {
         isTargeted = true
         onDragEnter()
         return .copy
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { .copy }
+    override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool { true }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        isTargeted = false
+        return onDrop(sender.draggingPasteboard)
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) { isTargeted = false }

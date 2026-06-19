@@ -93,6 +93,10 @@ struct ShelfView: View {
         .sheet(isPresented: $showAddCategory) {
             AddCategorySheet().environment(storage)
         }
+        // Keep the shelf pinned open while a sheet or AI preview is up, so moving
+        // the mouse away doesn't tear them down.
+        .onChange(of: showAddCategory) { _, open in controller.keepOpen = open || aiAction != nil }
+        .onChange(of: aiAction?.id) { _, _ in controller.keepOpen = showAddCategory || aiAction != nil }
         .onAppear { syncGrowth(animated: true) }
         .onChange(of: controller.isOpen) { _, _ in syncGrowth(animated: true) }
     }
@@ -121,6 +125,7 @@ struct ShelfView: View {
             } else {
                 CategoryTabsView(filter: filter, categories: categories,
                                  counts: counts, onAddCategory: { showAddCategory = true })
+                bookmarksRow
                 cards
                 if selectedItem != nil { shelfActionBar }
             }
@@ -227,6 +232,7 @@ struct ShelfView: View {
     private func handleHover(_ inside: Bool) {
         leaveWork?.cancel()
         guard shouldAutoCloseOnLeave() else { return }
+        if controller.keepOpen { return }   // sheet / AI preview open → stay
         if inside { return }
         // Near-instant on leave, with a tiny grace period only to tolerate the
         // pointer skimming the notch gap (matches NotchDock's snappy retract).
@@ -293,6 +299,63 @@ struct ShelfView: View {
         }
     }
 
+    /// Link clips in the current view, shown as a tappable bookmarks carousel
+    /// above the clip carousel. Clicking one opens it in the default browser.
+    private var bookmarkItems: [ClipItem] {
+        filtered.filter { $0.type == .link }
+    }
+
+    @ViewBuilder
+    private var bookmarksRow: some View {
+        if !bookmarkItems.isEmpty {
+            VStack(alignment: .leading, spacing: 5) {
+                Label("Bookmarks", systemImage: "bookmark.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Theme.textTertiary)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(bookmarkItems) { item in
+                            Button { openLink(item) } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "link")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(Theme.accent)
+                                    Text(bookmarkLabel(item))
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(Theme.textPrimary)
+                                        .lineLimit(1)
+                                }
+                                .padding(.horizontal, 10).padding(.vertical, 6)
+                                .background(Theme.pillInactive, in: Capsule())
+                                .overlay(Capsule().stroke(Theme.accent.opacity(0.25), lineWidth: 1))
+                                .fixedSize()
+                            }
+                            .buttonStyle(.plain)
+                            .help(item.sourceURL ?? item.textContent ?? "")
+                        }
+                    }
+                    .padding(.vertical, 1)
+                }
+            }
+        }
+    }
+
+    /// Short, readable label for a bookmark pill (host without scheme/www).
+    private func bookmarkLabel(_ item: ClipItem) -> String {
+        let raw = (item.sourceURL ?? item.textContent ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if let host = URL(string: raw)?.host {
+            return host.replacingOccurrences(of: "www.", with: "")
+        }
+        return raw
+    }
+
+    private func openLink(_ item: ClipItem) {
+        let raw = (item.sourceURL ?? item.textContent ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: raw), url.scheme?.hasPrefix("http") == true else { return }
+        NSWorkspace.shared.open(url)
+        onClose()
+    }
+
     @ViewBuilder
     private var cards: some View {
         if filtered.isEmpty {
@@ -314,7 +377,7 @@ struct ShelfView: View {
                             item: item,
                             isSelected: selectedID == item.id || copiedID == item.id,
                             onTap: { tapCard(item) },
-                            onDoubleTap: { copy(item) }
+                            onDoubleTap: { openItem(item) }
                         )
                         .frame(width: 130, height: 120)
                         .contextMenu { contextMenu(for: item) }
@@ -364,6 +427,27 @@ struct ShelfView: View {
         copiedID = item.id
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             if copiedID == item.id { onClose() }
+        }
+    }
+
+    /// Double-click: open files/folders in Finder, links in the browser; anything
+    /// else just copies (the classic behavior).
+    private func openItem(_ item: ClipItem) {
+        switch item.type {
+        case .file:
+            let paths = (item.textContent ?? "").components(separatedBy: "\n").filter { !$0.isEmpty }
+            for p in paths { NSWorkspace.shared.open(URL(fileURLWithPath: p)) }
+            onClose()
+        case .link:
+            let raw = (item.sourceURL ?? item.textContent ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if let url = URL(string: raw), url.scheme?.hasPrefix("http") == true {
+                NSWorkspace.shared.open(url)
+                onClose()
+            } else {
+                copy(item)
+            }
+        default:
+            copy(item)
         }
     }
 

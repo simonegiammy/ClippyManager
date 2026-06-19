@@ -118,6 +118,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             },
             onHover: { [weak self] in
                 DispatchQueue.main.async { self?.peekShelf() }
+            },
+            onDrop: { [weak self] pb in
+                guard let self else { return false }
+                let ok = DropIngestor.ingest(pasteboard: pb, into: self.storageManager)
+                if ok { self.openShelf() }   // reveal the freshly-saved item
+                return ok
             }
         )
         zone.isHoverEnabled = hoverToOpenEnabled
@@ -229,6 +235,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let inStrip = abs(m.x - full.midX) <= stripW / 2 && m.y >= full.maxY - stripH
 
         if shelfController.isOpen {
+            // A sheet / AI preview is up → never auto-close.
+            if shelfController.keepOpen { return }
             // Close when the pointer is outside the (open) shelf rect.
             if let panel = shelfPanel {
                 let f = panel.frame.insetBy(dx: -8, dy: -8)
@@ -253,12 +261,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         panel.orderFrontRegardless()
         shelfController.isOpen = true   // drives the grow animation in SwiftUI
 
-        // Close when clicking outside the shelf.
+        // Close when clicking outside the shelf — unless a sheet / AI preview is up.
         removeClickMonitor()
         localClickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] _ in
-            self?.closeShelf()
+            guard let self, !self.shelfController.keepOpen else { return }
+            self.closeShelf()
         }
     }
 
