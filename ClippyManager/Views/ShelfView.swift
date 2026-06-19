@@ -62,16 +62,18 @@ struct ShelfView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            // 1. The glass body, clipped to the notch shape that GROWS from the
-            //    pill. This is the "genie / drop" — one continuous form from the notch.
-            glassBody
+            // 1. The glass body — vibrancy masked to the NotchShape natively in
+            //    Core Animation (SwiftUI .clipShape can't mask an NSVisualEffectView,
+            //    which left un-rounded black corners). It grows/retracts itself.
+            NotchGlass(isOpen: controller.isOpen,
+                       width: panelWidth, height: panelHeight, menuBand: menuBand,
+                       openDuration: ShelfController.openDuration,
+                       closeDuration: ShelfController.closeDuration)
                 .frame(width: panelWidth, height: panelHeight)
-                .clipShape(NotchShape(progress: growth, menuBand: menuBand))
                 .overlay(
                     NotchShape(progress: growth, menuBand: menuBand)
                         .stroke(Theme.accent, lineWidth: isDropTargeted ? 2.5 : 0)
                 )
-                .shadow(color: .black.opacity(0.55), radius: 30, y: 18)
 
             // 2. Content fades in only once mostly grown.
             content
@@ -108,11 +110,6 @@ struct ShelfView: View {
                 growth = 0
             }
         }
-    }
-
-    /// The glass fill of the panel (no content) — what the notch shape clips.
-    private var glassBody: some View {
-        AuroraGlassSurface()
     }
 
     private var content: some View {
@@ -230,11 +227,13 @@ struct ShelfView: View {
         leaveWork?.cancel()
         guard shouldAutoCloseOnLeave() else { return }
         if inside { return }
+        // Near-instant on leave, with a tiny grace period only to tolerate the
+        // pointer skimming the notch gap (matches NotchDock's snappy retract).
         let work = DispatchWorkItem {
             if copiedID == nil { onClose() }
         }
         leaveWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: work)
     }
 
     @ViewBuilder

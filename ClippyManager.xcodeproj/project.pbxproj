@@ -22,6 +22,7 @@
 		29F00CCC1E87E1C7C2D23BC7 /* CategoryTabsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83B4AA3FED7FC435F657D8E0 /* CategoryTabsView.swift */; };
 		30A75CBAAF5B50588DE1D80D /* NotchDropZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBCE3EA6B7AEDCBB171BD0D5 /* NotchDropZone.swift */; };
 		36481BB1EEA1CCF60BFB26E8 /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4296A53A1E2C7E48D88C4C /* HotKeyManager.swift */; };
+		373C2373EFAA936ED380D8CB /* NotchGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF76D004ED56F916AD8C296 /* NotchGlass.swift */; };
 		3F639E210FB93EB57B430539 /* VisualEffectBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 943B2C2D3CA5CFA63A7D7A52 /* VisualEffectBackground.swift */; };
 		480FEB2A6AB26FF55BCF8A6E /* PastePalettePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4129A3AECBFC1087BDA133AC /* PastePalettePanel.swift */; };
 		4D6DEDFB2B057A0012761814 /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1418BC65740F2B1D071A0BBF /* ClipboardMonitor.swift */; };
@@ -100,6 +101,7 @@
 		C50341F9835F3792820708DF /* PaletteController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteController.swift; sourceTree = "<group>"; };
 		C5D4795C8C56F0EC06CC1306 /* AddPromptSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPromptSheet.swift; sourceTree = "<group>"; };
 		C9BEEC1F1545233884C84891 /* SelectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionService.swift; sourceTree = "<group>"; };
+		CCF76D004ED56F916AD8C296 /* NotchGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchGlass.swift; sourceTree = "<group>"; };
 		D016E57FB2934597C170CF2E /* SensitiveDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensitiveDetector.swift; sourceTree = "<group>"; };
 		D0F18E84B63093D5A127E5A6 /* ClipItemType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipItemType.swift; sourceTree = "<group>"; };
 		D6ABD870442D237DC7E6EEE8 /* ContentClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentClassifier.swift; sourceTree = "<group>"; };
@@ -139,6 +141,7 @@
 				83B4AA3FED7FC435F657D8E0 /* CategoryTabsView.swift */,
 				87C51D7A5A7D46C302086621 /* DetailPaneView.swift */,
 				96BACECBD8735C04EE23D705 /* LibraryView.swift */,
+				CCF76D004ED56F916AD8C296 /* NotchGlass.swift */,
 				AE97497721F2E9CA0CD7CC28 /* SearchBarView.swift */,
 				3479A52DEAC56B3579670817 /* SettingsView.swift */,
 				69CEC534E91818607A44B950 /* ShelfController.swift */,
@@ -379,6 +382,7 @@
 				36481BB1EEA1CCF60BFB26E8 /* HotKeyManager.swift in Sources */,
 				68053E97950C23D8606F11F3 /* LibraryView.swift in Sources */,
 				30A75CBAAF5B50588DE1D80D /* NotchDropZone.swift in Sources */,
+				373C2373EFAA936ED380D8CB /* NotchGlass.swift in Sources */,
 				6954873DBDC9DD2B7FDC4716 /* NotchShape.swift in Sources */,
 				A3564FD5C204E5AC6EC382E8 /* PaletteController.swift in Sources */,
 				0F937A79BE9FA29700591F03 /* PaletteRowView.swift in Sources */,
