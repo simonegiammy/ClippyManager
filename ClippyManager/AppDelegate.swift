@@ -3,7 +3,7 @@ import SwiftUI
 import SwiftData
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private var container: ModelContainer!
     private var storageManager: StorageManager!
@@ -81,12 +81,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         guard let button = statusItem.button else { return }
-        let img = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Clippy")!
-        img.isTemplate = true
+        // The orange Clippy app icon (full color, not a template glyph).
+        let img = NSImage(named: "MenuBarIcon") ?? NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Clippy")!
+        img.isTemplate = false
+        img.size = NSSize(width: 18, height: 18)
         button.image = img
-        button.target = self
-        button.action = #selector(statusItemClicked)
-        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        // Standard macOS menu-bar behavior: any click opens the menu (with the
+        // button highlighted), exactly like a normal menu-bar app.
+        statusItem.menu = makeStatusMenu()
     }
 
     private func setupClipboardMonitor() {
@@ -150,24 +152,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     // MARK: - Status item menu / click
 
-    @objc private func statusItemClicked() {
-        let event = NSApp.currentEvent
-        if event?.type == .rightMouseUp {
-            showStatusMenu()
-        } else {
-            toggleShelf()
-        }
-    }
-
-    private func showStatusMenu() {
+    /// Builds the standard menu-bar menu. Its delegate (self) refreshes the
+    /// dynamic Pause item each time it's about to open.
+    private func makeStatusMenu() -> NSMenu {
         let menu = NSMenu()
+        menu.delegate = self
         menu.addItem(withTitle: "Open Shelf  (⌃⌘V)", action: #selector(menuToggleShelf), keyEquivalent: "")
         menu.addItem(withTitle: "Open Library", action: #selector(menuOpenLibrary), keyEquivalent: "")
         menu.addItem(.separator())
-        let pauseItem = NSMenuItem(
-            title: storageManager.isCapturePaused ? "Resume Capture" : "Pause Capture",
-            action: #selector(menuTogglePause), keyEquivalent: ""
-        )
+
+        let pauseItem = NSMenuItem(title: "Pause Capture", action: #selector(menuTogglePause), keyEquivalent: "")
+        pauseItem.tag = 1   // looked up in menuWillOpen to set the right title
         menu.addItem(pauseItem)
 
         menu.addItem(.separator())
@@ -176,18 +171,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.addItem(settingsItem)
 
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Clippy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        menu.items.forEach { $0.target = self }
-        menu.items.last?.target = NSApp
-        statusItem.menu = menu
-        statusItem.button?.performClick(nil)
-        statusItem.menu = nil   // reset so left-click toggles next time
+        let quit = NSMenuItem(title: "Quit Clippy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        quit.target = NSApp
+        menu.addItem(quit)
+
+        // Action items target self (the Quit item keeps its NSApp target).
+        for item in menu.items where item.action != nil && item !== quit {
+            item.target = self
+        }
+        return menu
     }
 
     @objc private func menuToggleShelf() { toggleShelf() }
     @objc private func menuOpenLibrary() { openLibrary() }
     @objc private func menuTogglePause() { storageManager.isCapturePaused.toggle() }
     @objc private func menuOpenSettings() { openSettings() }
+
+    // MARK: - NSMenuDelegate
+
+    func menuWillOpen(_ menu: NSMenu) {
+        // Refresh the dynamic Pause/Resume title each time the menu opens.
+        if let pause = menu.item(withTag: 1) {
+            pause.title = storageManager.isCapturePaused ? "Resume Capture" : "Pause Capture"
+        }
+    }
 
     // MARK: - Shelf
 
