@@ -17,6 +17,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var localClickMonitor: Any?
     private let shelfController = ShelfController()
     private var shelfCloseWork: DispatchWorkItem?
+    private var notchHoverMonitor: Any?       // global mouse-move watcher (Space-agnostic)
+    private var pointerInsideNotch = false
 
     // AI paste palette
     private var aiAvailability: AIAvailability!
@@ -60,6 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         clipboardMonitor?.stop()
         hotKeyManager?.unregister()
         removeClickMonitor()
+        if let m = notchHoverMonitor { NSEvent.removeMonitor(m); notchHoverMonitor = nil }
     }
 
     // MARK: - Setup
@@ -119,6 +122,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         zone.position()
         zone.orderFront(nil)
         notchDropZone = zone
+
+        // Global mouse monitor: the NSTrackingArea inside NotchDropZone does NOT
+        // receive events when another app owns the active Space (e.g. a real
+        // fullscreen app), so hover-to-open would silently fail there. A global
+        // monitor sees the pointer regardless of Space and drives open/close.
+        notchHoverMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
+            self?.handleGlobalMouseMove()
+        }
 
         // Reposition if the screen layout changes.
         NotificationCenter.default.addObserver(
@@ -195,6 +206,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if shelfController.isOpen { return }
         shelfHoverActivated = true
         openShelf()
+    }
+
+    /// Space-agnostic hover detection. Opens when the cursor enters the notch
+    /// strip at the top center; closes when it leaves the open shelf's bounds.
+    private func handleGlobalMouseMove() {
+        guard hoverToOpenEnabled, let screen = NSScreen.main else { return }
+        // Cocoa global coords: origin bottom-left. Convert from the event's
+        // top-left mouseLocation.
+        let m = NSEvent.mouseLocation
+        let full = screen.frame
+
+        // Notch trigger strip: ~220pt wide, top ~40pt of the screen.
+        let stripW: CGFloat = 220, stripH: CGFloat = 40
+        let inStrip = abs(m.x - full.midX) <= stripW / 2 && m.y >= full.maxY - stripH
+
+        if shelfController.isOpen {
+            // Close when the pointer is outside the (open) shelf rect.
+            if let panel = shelfPanel {
+                let f = panel.frame.insetBy(dx: -8, dy: -8)
+                if shelfHoverActivated && !f.contains(m) && !inStrip {
+                    closeShelf()
+                }
+            }
+        } else if inStrip {
+            shelfHoverActivated = true
+            openShelf()
+        }
     }
 
     private func openShelf() {

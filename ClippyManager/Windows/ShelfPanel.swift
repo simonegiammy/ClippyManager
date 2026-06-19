@@ -27,6 +27,13 @@ final class ShelfPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
+    /// macOS normally constrains windows so they can't cover the menu bar, which
+    /// would push the shelf a few pixels below the top and break the notch join.
+    /// Returning the rect unchanged lets the panel sit flush at the very top.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        frameRect
+    }
+
     /// Pin the panel to the very top, centered on the notch — its pill aligns
     /// with the physical notch and the body grows down from there.
     func positionUnderNotch() {

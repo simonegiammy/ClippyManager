@@ -63,11 +63,13 @@ final class NotchGlassNSView: NSView {
         maskLayer.fillColor = NSColor.black.cgColor
         effect.layer?.mask = maskLayer
 
-        // Shape-following shadow on the container layer.
+        // Soft drop shadow, straight down — a small offset/radius avoids the
+        // halo artefacts that a large shape-following shadow produced around the
+        // concave shoulders while collapsing.
         layer?.shadowColor = NSColor.black.cgColor
-        layer?.shadowOpacity = 0.5
-        layer?.shadowRadius = 24
-        layer?.shadowOffset = CGSize(width: 0, height: -12)
+        layer?.shadowOpacity = 0.35
+        layer?.shadowRadius = 14
+        layer?.shadowOffset = CGSize(width: 0, height: -6)
     }
     required init?(coder: NSCoder) { fatalError() }
 
@@ -90,15 +92,21 @@ final class NotchGlassNSView: NSView {
             : CAMediaTimingFunction(controlPoints: 0.4, 0, 0.2, 1)
 
         if animated {
-            for (lyr, key) in [(maskLayer, "path"), (layer!, "shadowPath")] {
-                let a = CABasicAnimation(keyPath: key)
-                a.fromValue = (key == "path" ? maskLayer.presentation()?.path : layer?.presentation()?.shadowPath)
-                    ?? (key == "path" ? maskLayer.path : layer?.shadowPath)
-                a.toValue = target
-                a.duration = duration
-                a.timingFunction = timing
-                lyr.add(a, forKey: key)
-            }
+            // Animate ONLY the blur mask. The shadow path is driven implicitly
+            // (matched duration) without an explicit fromValue, which removes the
+            // edge flicker on the shoulders during the collapse.
+            let a = CABasicAnimation(keyPath: "path")
+            a.fromValue = maskLayer.presentation()?.path ?? maskLayer.path
+            a.toValue = target
+            a.duration = duration
+            a.timingFunction = timing
+            maskLayer.add(a, forKey: "path")
+
+            let s = CABasicAnimation(keyPath: "shadowPath")
+            s.toValue = target
+            s.duration = duration
+            s.timingFunction = timing
+            layer?.add(s, forKey: "shadowPath")
         }
         maskLayer.path = target
         layer?.shadowPath = target
