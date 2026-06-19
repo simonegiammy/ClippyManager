@@ -259,9 +259,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// notch instead of vanishing (the NotchDock behaviour).
     private func closeShelf() {
         removeClickMonitor()
-        guard let panel = shelfPanel, panel.isVisible, shelfController.isOpen else {
-            shelfPanel?.orderOut(nil); return
-        }
+        // Idempotent: if a close is already animating (isOpen already false but a
+        // collapse is scheduled), do NOTHING — a second call must not order the
+        // panel out immediately and truncate the retract animation.
+        guard shelfController.isOpen else { return }
+        guard shelfPanel != nil else { return }
+
         shelfController.isOpen = false   // triggers the reverse animation
         shelfCloseWork?.cancel()
         let work = DispatchWorkItem { [weak self] in

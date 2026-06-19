@@ -79,22 +79,23 @@ final class NotchGlassNSView: NSView {
         veil.frame = bounds
         maskLayer.frame = bounds
         // Re-assert the static path for the current state on relayout.
-        let p = flippedPath(progress: currentOpen ? 1 : 0)
-        maskLayer.path = p
-        layer?.shadowPath = p
+        let prog = currentOpen ? CGFloat(1) : CGFloat(0)
+        maskLayer.path = flippedPath(progress: prog)
+        layer?.shadowPath = bodyShadowPath(progress: prog)
     }
 
     func apply(open: Bool, animated: Bool, duration: Double) {
         currentOpen = open
         let target = flippedPath(progress: open ? 1 : 0)
+        let shadowTarget = bodyShadowPath(progress: open ? 1 : 0)
         let timing = open
             ? CAMediaTimingFunction(controlPoints: 0.22, 1.1, 0.36, 1)
             : CAMediaTimingFunction(controlPoints: 0.4, 0, 0.2, 1)
 
         if animated {
-            // Animate ONLY the blur mask. The shadow path is driven implicitly
-            // (matched duration) without an explicit fromValue, which removes the
-            // edge flicker on the shoulders during the collapse.
+            // Animate ONLY the blur mask. The shadow uses the BODY rounded rect
+            // (not the full notch shape) so it never projects the black "beaks"
+            // the concave shoulders produced.
             let a = CABasicAnimation(keyPath: "path")
             a.fromValue = maskLayer.presentation()?.path ?? maskLayer.path
             a.toValue = target
@@ -103,13 +104,13 @@ final class NotchGlassNSView: NSView {
             maskLayer.add(a, forKey: "path")
 
             let s = CABasicAnimation(keyPath: "shadowPath")
-            s.toValue = target
+            s.toValue = shadowTarget
             s.duration = duration
             s.timingFunction = timing
             layer?.add(s, forKey: "shadowPath")
         }
         maskLayer.path = target
-        layer?.shadowPath = target
+        layer?.shadowPath = shadowTarget
     }
 
     /// NotchShape path flipped into the layer's bottom-left coordinate space.
@@ -118,5 +119,15 @@ final class NotchGlassNSView: NSView {
         let p = NotchShape(progress: progress, menuBand: menuBand).path(in: rect).cgPath
         var flip = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: bounds.height)
         return p.copy(using: &flip) ?? p
+    }
+
+    /// Shadow path = just the rounded BODY (below the menu band), so the shadow
+    /// never traces the concave shoulders that produced the side "beaks".
+    /// In the layer's bottom-left space the body occupies y ∈ [0, height-menuBand].
+    private func bodyShadowPath(progress: CGFloat) -> CGPath {
+        let bodyH = max(0, (bounds.height - menuBand) * progress)
+        guard bodyH > 1 else { return CGMutablePath() }
+        let rect = CGRect(x: 0, y: 0, width: bounds.width, height: bodyH)
+        return CGPath(roundedRect: rect, cornerWidth: 26, cornerHeight: 26, transform: nil)
     }
 }
