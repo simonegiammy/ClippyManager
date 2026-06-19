@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var libraryWindow: NSWindow?
     private var notchDropZone: NotchDropZone?
     private var localClickMonitor: Any?
+    private let shelfController = ShelfController()
+    private var shelfCloseWork: DispatchWorkItem?
 
     // AI paste palette
     private var aiAvailability: AIAvailability!
@@ -179,7 +181,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: - Shelf
 
     private func toggleShelf() {
-        if let panel = shelfPanel, panel.isVisible {
+        if shelfController.isOpen {
             closeShelf()
         } else {
             shelfHoverActivated = false   // explicit open → stays until clicked away
@@ -190,20 +192,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// Open the shelf from a hover (peek). Auto-closes when the mouse leaves.
     private func peekShelf() {
         guard hoverToOpenEnabled else { return }
-        if let panel = shelfPanel, panel.isVisible { return }
+        if shelfController.isOpen { return }
         shelfHoverActivated = true
         openShelf()
     }
 
     private func openShelf() {
-        // Rebuild each time so the genie grow animation replays on every open.
-        let panel = makeShelfPanel()
+        shelfCloseWork?.cancel()
+        let panel = shelfPanel ?? makeShelfPanel()
         shelfPanel = panel
         panel.positionUnderNotch()
-        NSApp.activate(ignoringOtherApps: true)
-        panel.makeKeyAndOrderFront(nil)
+        // Order front WITHOUT activating the app — activating switches Spaces and
+        // makes the panel vanish over other apps' fullscreen windows. A
+        // non-activating panel at max window level overlays fullscreen instead.
+        panel.orderFrontRegardless()
+        shelfController.isOpen = true   // drives the grow animation in SwiftUI
 
-        // Close when clicking outside the shelf
+        // Close when clicking outside the shelf.
         removeClickMonitor()
         localClickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
@@ -212,10 +217,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    /// Animate the collapse, THEN order the panel out — so it retracts into the
+    /// notch instead of vanishing (the NotchDock behaviour).
     private func closeShelf() {
-        shelfPanel?.orderOut(nil)
-        shelfPanel = nil
         removeClickMonitor()
+        guard let panel = shelfPanel, panel.isVisible, shelfController.isOpen else {
+            shelfPanel?.orderOut(nil); return
+        }
+        shelfController.isOpen = false   // triggers the reverse animation
+        shelfCloseWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.shelfPanel?.orderOut(nil)
+        }
+        shelfCloseWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + ShelfController.closeDuration + 0.02, execute: work)
     }
 
     private func makeShelfPanel() -> ShelfPanel {
@@ -226,6 +241,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let root = ShelfView(
             engine: engine,
             availability: avail,
+            controller: shelfController,
             onOpenLibrary: { [weak self] in self?.closeShelf(); self?.openLibrary() },
             onClose: { [weak self] in self?.closeShelf() },
             shouldAutoCloseOnLeave: { [weak self] in self?.shelfHoverActivated ?? false }

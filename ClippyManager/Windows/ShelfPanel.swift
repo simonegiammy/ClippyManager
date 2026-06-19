@@ -11,8 +11,11 @@ final class ShelfPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
-        level = .mainMenu
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+        // Max window level so the shelf overlays other apps' fullscreen windows
+        // (like NotchDock), and a non-activating panel so showing it never
+        // switches Spaces away from the fullscreen app.
+        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.maximumWindow)))
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         backgroundColor = .clear
         isOpaque = false
         hasShadow = false   // the SwiftUI NotchShape carries its own shadow

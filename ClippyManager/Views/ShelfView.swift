@@ -26,6 +26,7 @@ struct ShelfView: View {
 
     let engine: AIEngine
     let availability: AIAvailability
+    var controller: ShelfController
     var onOpenLibrary: () -> Void
     var onClose: () -> Void
     var shouldAutoCloseOnLeave: () -> Bool = { false }
@@ -89,9 +90,23 @@ struct ShelfView: View {
         .sheet(isPresented: $showAddCategory) {
             AddCategorySheet().environment(storage)
         }
-        .onAppear {
-            growth = 0
-            withAnimation(.timingCurve(0.34, 1.32, 0.42, 1, duration: 0.55)) { growth = 1 }
+        .onAppear { syncGrowth(animated: true) }
+        .onChange(of: controller.isOpen) { _, _ in syncGrowth(animated: true) }
+    }
+
+    /// Animate the notch shape toward the controller's open state, using the
+    /// curves measured from NotchDock: a quick small-overshoot spring on open,
+    /// a smooth ease-in-out on close (no bounce).
+    private func syncGrowth(animated: Bool) {
+        guard animated else { growth = controller.isOpen ? 1 : 0; return }
+        if controller.isOpen {
+            withAnimation(.timingCurve(0.22, 1.1, 0.36, 1, duration: ShelfController.openDuration)) {
+                growth = 1
+            }
+        } else {
+            withAnimation(.timingCurve(0.4, 0, 0.2, 1, duration: ShelfController.closeDuration)) {
+                growth = 0
+            }
         }
     }
 

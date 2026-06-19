@@ -10,14 +10,15 @@ final class NotchDropZone: NSPanel {
     init(onDragEnter: @escaping () -> Void, onHover: @escaping () -> Void) {
         zoneView = DropZoneView(onDragEnter: onDragEnter, onHover: onHover)
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 200, height: 18),
+            contentRect: NSRect(x: 0, y: 0, width: 220, height: 36),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         isFloatingPanel = true
-        level = .mainMenu
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        // Above everything, including other apps' fullscreen windows.
+        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.maximumWindow)))
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         backgroundColor = .clear
         isOpaque = false
         hasShadow = false
@@ -36,11 +37,12 @@ final class NotchDropZone: NSPanel {
 
     func position() {
         guard let screen = NSScreen.main else { return }
-        let visible = screen.visibleFrame
         let full = screen.frame
         let size = frame.size
         let x = full.midX - size.width / 2
-        let y = visible.maxY - size.height + 2   // just below the menu bar / notch
+        // Flush with the very top of the screen so the hover zone sits ON the
+        // physical notch (not the menu-bar strip below it).
+        let y = full.maxY - size.height
         setFrameOrigin(NSPoint(x: x, y: y))
     }
 }
@@ -69,17 +71,12 @@ private final class DropZoneView: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     override func draw(_ dirtyRect: NSRect) {
-        let inset = bounds.insetBy(dx: 2, dy: 5)
+        // Invisible by default — the physical black notch IS the affordance, like
+        // NotchDock. Only show a faint accent tint while a drag hovers over it.
+        guard isTargeted else { return }
+        let inset = bounds.insetBy(dx: 2, dy: 6)
         let path = NSBezierPath(roundedRect: inset, xRadius: inset.height / 2, yRadius: inset.height / 2)
-        let color: NSColor
-        if isTargeted {
-            color = .controlAccentColor
-        } else if isMouseInside {
-            color = NSColor.white.withAlphaComponent(0.5)
-        } else {
-            color = NSColor.white.withAlphaComponent(0.22)
-        }
-        color.setFill()
+        NSColor.controlAccentColor.withAlphaComponent(0.85).setFill()
         path.fill()
     }
 
@@ -88,9 +85,10 @@ private final class DropZoneView: NSView {
     override func mouseEntered(with event: NSEvent) {
         isMouseInside = true
         guard isHoverEnabled else { return }
+        // Snappy, like NotchDock — barely any delay before it grows.
         let work = DispatchWorkItem { [weak self] in self?.onHover() }
         hoverWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06, execute: work)
     }
 
     override func mouseExited(with event: NSEvent) {
