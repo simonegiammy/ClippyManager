@@ -230,8 +230,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let m = NSEvent.mouseLocation
         let full = screen.frame
 
-        // Notch trigger strip: ~220pt wide, top ~40pt of the screen.
-        let stripW: CGFloat = 220, stripH: CGFloat = 40
+        // Notch trigger strip: ~240pt wide, top ~52pt of the screen.
+        let stripW: CGFloat = 240, stripH: CGFloat = 52
         let inStrip = abs(m.x - full.midX) <= stripW / 2 && m.y >= full.maxY - stripH
 
         if shelfController.isOpen {

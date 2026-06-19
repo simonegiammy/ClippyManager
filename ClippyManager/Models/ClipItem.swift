@@ -88,4 +88,44 @@ final class ClipItem {
     var relativeTime: String {
         createdAt.relativeShort
     }
+
+    // MARK: - Link / file helpers
+
+    /// The raw URL string for a link clip.
+    var linkURLString: String {
+        (sourceURL ?? textContent ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Host without scheme/www — e.g. "github.com".
+    var linkHost: String {
+        if let host = URL(string: linkURLString)?.host {
+            return host.replacingOccurrences(of: "www.", with: "")
+        }
+        return linkURLString
+    }
+
+    /// Path/query part of a link, for the card subtitle (e.g. "/apple-intelligence").
+    var linkPath: String {
+        guard let url = URL(string: linkURLString) else { return "" }
+        let p = url.path + (url.query.map { "?\($0)" } ?? "")
+        return p == "/" ? "" : p
+    }
+
+    /// File paths of a .file clip.
+    var filePaths: [String] {
+        (textContent ?? "").components(separatedBy: "\n").filter { !$0.isEmpty }
+    }
+
+    /// Whether this .file clip points at a directory.
+    var isFolder: Bool {
+        guard type == .file, let first = filePaths.first else { return false }
+        var dir: ObjCBool = false
+        return FileManager.default.fileExists(atPath: first, isDirectory: &dir) && dir.boolValue
+    }
+
+    /// The macOS file-type icon for a .file clip.
+    var fileIcon: NSImage? {
+        guard type == .file, let first = filePaths.first else { return nil }
+        return NSWorkspace.shared.icon(forFile: first)
+    }
 }

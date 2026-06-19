@@ -12,14 +12,18 @@ final class NotchDropZone: NSPanel {
          onDrop: @escaping (NSPasteboard) -> Bool) {
         zoneView = DropZoneView(onDragEnter: onDragEnter, onHover: onHover, onDrop: onDrop)
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 220, height: 36),
+            // Taller target (52pt) so a dragged file is easy to land on the notch.
+            contentRect: NSRect(x: 0, y: 0, width: 240, height: 52),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         isFloatingPanel = true
-        // Above everything, including other apps' fullscreen windows.
-        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.maximumWindow)))
+        // popUpMenu level floats above normal windows but is BELOW the shielding
+        // level — the shielding/maximum level silently breaks Finder drag delivery,
+        // which is why dropping a file did nothing. Hover-open still works over
+        // fullscreen via the global mouse monitor (Space-agnostic).
+        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.popUpMenuWindow)))
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         backgroundColor = .clear
         isOpaque = false

@@ -45,6 +45,7 @@
 		A3564FD5C204E5AC6EC382E8 /* PaletteController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50341F9835F3792820708DF /* PaletteController.swift */; };
 		A9EEC7601BCCC747C413DEE6 /* DropIngestor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDDB999969E106C50D9493F6 /* DropIngestor.swift */; };
 		AA2F7A9741EA9B4B9778BCE0 /* ClipItemType.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F18E84B63093D5A127E5A6 /* ClipItemType.swift */; };
+		B6CC199601E11ED0D686C5B6 /* FaviconLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA39CD59F5599A8890EF9B4 /* FaviconLoader.swift */; };
 		B81F9490A6B859EC5A0A0054 /* ShelfPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58CA813BF491E22A53CDCE63 /* ShelfPanel.swift */; };
 		BDC320E6FD7393662F0BA6D3 /* GeneratedOutputs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EF5461F013DF94EAC695506 /* GeneratedOutputs.swift */; };
 		C28EBE31277EEDECE62E6534 /* AIUsageTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E44A6D916B1A0DC141D835EC /* AIUsageTracker.swift */; };
@@ -63,6 +64,7 @@
 
 /* Begin PBXFileReference section */
 		0A6D603CEE1D014561E57E40 /* PastePaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastePaletteView.swift; sourceTree = "<group>"; };
+		0EA39CD59F5599A8890EF9B4 /* FaviconLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconLoader.swift; sourceTree = "<group>"; };
 		0EF5461F013DF94EAC695506 /* GeneratedOutputs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedOutputs.swift; sourceTree = "<group>"; };
 		1418BC65740F2B1D071A0BBF /* ClipboardMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardMonitor.swift; sourceTree = "<group>"; };
 		14E55D73ABB5DF889B52DBE7 /* ClipItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipItem.swift; sourceTree = "<group>"; };
@@ -266,6 +268,7 @@
 				9487713B56C72E26816F600C /* ClipFilter.swift */,
 				D6ABD870442D237DC7E6EEE8 /* ContentClassifier.swift */,
 				FDDB999969E106C50D9493F6 /* DropIngestor.swift */,
+				0EA39CD59F5599A8890EF9B4 /* FaviconLoader.swift */,
 				ED4296A53A1E2C7E48D88C4C /* HotKeyManager.swift */,
 				F076EA59373E5AF0467F7CE7 /* PasteService.swift */,
 				C9BEEC1F1545233884C84891 /* SelectionService.swift */,
@@ -374,6 +377,7 @@
 				E7BBADD588692CB5E450EF2D /* DetailPaneView.swift in Sources */,
 				A9EEC7601BCCC747C413DEE6 /* DropIngestor.swift in Sources */,
 				0DE7846A1D144D5E098E3A7F /* Extensions.swift in Sources */,
+				B6CC199601E11ED0D686C5B6 /* FaviconLoader.swift in Sources */,
 				BDC320E6FD7393662F0BA6D3 /* GeneratedOutputs.swift in Sources */,
 				36481BB1EEA1CCF60BFB26E8 /* HotKeyManager.swift in Sources */,
 				68053E97950C23D8606F11F3 /* LibraryView.swift in Sources */,

@@ -317,21 +317,19 @@ struct ShelfView: View {
                         ForEach(bookmarkItems) { item in
                             Button { openLink(item) } label: {
                                 HStack(spacing: 6) {
-                                    Image(systemName: "link")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundStyle(Theme.accent)
+                                    FaviconView(host: item.linkHost, size: 15)
                                     Text(bookmarkLabel(item))
                                         .font(.system(size: 11, weight: .medium))
                                         .foregroundStyle(Theme.textPrimary)
                                         .lineLimit(1)
                                 }
-                                .padding(.horizontal, 10).padding(.vertical, 6)
+                                .padding(.horizontal, 9).padding(.vertical, 6)
                                 .background(Theme.pillInactive, in: Capsule())
-                                .overlay(Capsule().stroke(Theme.accent.opacity(0.25), lineWidth: 1))
+                                .overlay(Capsule().stroke(Theme.cardBorder, lineWidth: 1))
                                 .fixedSize()
                             }
                             .buttonStyle(.plain)
-                            .help(item.sourceURL ?? item.textContent ?? "")
+                            .help(item.linkURLString)
                         }
                     }
                     .padding(.vertical, 1)

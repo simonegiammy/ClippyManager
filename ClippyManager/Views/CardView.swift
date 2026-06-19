@@ -58,6 +58,8 @@ struct CardView: View {
             codePreview
         case .link:
             linkPreview
+        case .file:
+            filePreview
         default:
             textPreview
         }
@@ -99,23 +101,76 @@ struct CardView: View {
     }
 
     private var linkPreview: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Theme.accent.opacity(0.25), Theme.cardBackground],
+                colors: [Theme.accent.opacity(0.22), Theme.cardBackground],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
-            VStack(spacing: 8) {
-                Image(systemName: "link")
-                    .font(.system(size: 20))
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 7) {
+                    FaviconView(host: item.linkHost, size: 22)
+                    Text(item.linkHost)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                }
+                if !item.linkPath.isEmpty {
+                    Text(item.linkPath)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 0)
+                Label("Open", systemImage: "arrow.up.forward.app")
+                    .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(Theme.accent)
+            }
+            .padding(11)
+        }
+    }
+
+    /// File and folder cards get a dedicated widget: a folder glyph + item count
+    /// for directories, or the macOS file-type icon for files.
+    private var filePreview: some View {
+        ZStack {
+            LinearGradient(colors: [Color.white.opacity(0.08), Theme.cardBackground],
+                           startPoint: .top, endPoint: .bottom)
+            VStack(spacing: 8) {
+                if item.isFolder {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 34))
+                        .foregroundStyle(LinearGradient(colors: [Color(hex: "#7FC3FF")!, Color(hex: "#3A9BFF")!],
+                                                        startPoint: .top, endPoint: .bottom))
+                    if let count = folderCount {
+                        Text(count)
+                            .font(.system(size: 9))
+                            .foregroundStyle(Theme.textTertiary)
+                    }
+                } else if let icon = item.fileIcon {
+                    Image(nsImage: icon)
+                        .resizable().scaledToFit()
+                        .frame(width: 44, height: 44)
+                } else {
+                    Image(systemName: "doc.fill")
+                        .font(.system(size: 34))
+                        .foregroundStyle(Theme.textTertiary)
+                }
                 Text(item.preview)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
             }
+            .padding(.vertical, 10)
         }
+    }
+
+    private var folderCount: String? {
+        guard item.isFolder, let first = item.filePaths.first else { return nil }
+        let items = (try? FileManager.default.contentsOfDirectory(atPath: first))?.count
+        return items.map { "\($0) item\($0 == 1 ? "" : "s")" }
     }
 
     private var colorPreview: some View {
