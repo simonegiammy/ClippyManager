@@ -20,6 +20,7 @@ final class ClipItem {
     var byteSize: Int = 0
     var isSensitive: Bool = false
     var categoryID: UUID?       // assigned custom category
+    var isBookmarked: Bool = false   // link explicitly saved to the bookmarks carousel
 
     init(
         type: ClipItemType,

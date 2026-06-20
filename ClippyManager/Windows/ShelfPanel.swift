@@ -11,10 +11,16 @@ final class ShelfPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
-        // Max window level so the shelf overlays other apps' fullscreen windows
-        // (like NotchDock), and a non-activating panel so showing it never
-        // switches Spaces away from the fullscreen app.
-        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.maximumWindow)))
+        // popUpMenu level — NOT maximumWindow. The shielding/maximum level
+        // silently blocks Finder drag delivery, so a file dragged onto the OPEN
+        // shelf couldn't be dropped (the shelf looked like it sat "underneath"
+        // the drag). popUpMenu still floats above normal windows, sits above the
+        // menu bar so the pill joins the notch flush, and with
+        // .fullScreenAuxiliary overlays other apps' fullscreen windows. It's the
+        // same level as the drop zone; the shelf is ordered front after it, so it
+        // stays on top and receives the drag once open. Non-activating so showing
+        // it never switches Spaces away from a fullscreen app.
+        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.popUpMenuWindow)))
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         backgroundColor = .clear
         isOpaque = false

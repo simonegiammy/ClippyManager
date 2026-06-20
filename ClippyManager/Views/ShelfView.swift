@@ -12,13 +12,13 @@ struct ShelfView: View {
     @State private var filter = ClipFilter()
     @State private var showAddCategory = false
     @State private var copiedID: UUID? = nil
-    @State private var selectedID: UUID? = nil       // tap-selected clip → shows AI bar
     @State private var isDropTargeted = false
     @State private var leaveWork: DispatchWorkItem?
     @State private var growth: CGFloat = 0   // 0 closed (pill) → 1 open (panel)
 
-    // AI preview state (inline, when an action runs from the shelf)
+    // AI preview state (inline, when an action runs from a card's context menu)
     @State private var aiAction: AIAction?
+    @State private var aiItem: ClipItem?
     @State private var aiText: String = ""
     @State private var aiStreaming = false
     @State private var aiError: String?
@@ -31,20 +31,12 @@ struct ShelfView: View {
     var onClose: () -> Void
     var shouldAutoCloseOnLeave: () -> Bool = { false }
 
-    private var selectedItem: ClipItem? {
-        guard let id = selectedID else { return nil }
-        return allItems.first { $0.id == id }
-    }
-
-    private var shelfActions: [AIAction] {
-        guard let item = selectedItem, !item.isSensitive else { return [] }
-        return AIActionCatalog.actions(for: item, destinationBundleID: nil)
-    }
-
-    // Panel size — the menu band at top is where the notch pill lives.
-    private let panelWidth: CGFloat = 720
-    private let panelHeight: CGFloat = 320   // room for tabs + cards + AI action bar
+    // Panel size — the menu band at top is where the notch pill lives, and the
+    // neck is the funnel the glass emerges through before reaching full width.
+    private let panelWidth: CGFloat = 560
+    private let panelHeight: CGFloat = 380
     private let menuBand: CGFloat = 34
+    private let neck: CGFloat = 70
 
     private var filtered: [ClipItem] {
         filter.apply(to: allItems, categories: categories)
@@ -67,11 +59,12 @@ struct ShelfView: View {
             //    which left un-rounded black corners). It grows/retracts itself.
             NotchGlass(isOpen: controller.isOpen,
                        width: panelWidth, height: panelHeight, menuBand: menuBand,
+                       neckDepth: neck,
                        openDuration: ShelfController.openDuration,
                        closeDuration: ShelfController.closeDuration)
                 .frame(width: panelWidth, height: panelHeight)
                 .overlay(
-                    NotchShape(progress: growth, menuBand: menuBand)
+                    NotchShape(progress: growth, menuBand: menuBand, neckDepth: neck)
                         .stroke(Theme.accent, lineWidth: isDropTargeted ? 2.5 : 0)
                 )
 
@@ -127,54 +120,11 @@ struct ShelfView: View {
                                  counts: counts, onAddCategory: { showAddCategory = true })
                 bookmarksRow
                 cards
-                if selectedItem != nil { shelfActionBar }
             }
         }
-        .padding(.top, menuBand + 8)
+        .padding(.top, menuBand + neck + 6)
         .padding(.horizontal, 16)
         .padding(.bottom, 14)
-    }
-
-    /// AI action chips for the tap-selected clip — appears under the cards.
-    @ViewBuilder
-    private var shelfActionBar: some View {
-        if !shelfActions.isEmpty {
-            HStack(spacing: 7) {
-                Image(systemName: availability.actionsActive ? "wand.and.stars" : "sparkles")
-                    .font(.system(size: 11))
-                    .foregroundStyle(availability.actionsActive ? Theme.accent : Theme.textTertiary)
-                ForEach(Array(shelfActions.prefix(4).enumerated()), id: \.element.id) { idx, action in
-                    Button { runAI(action) } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: availability.actionsActive ? action.systemImage : "lock.fill")
-                                .font(.system(size: 10, weight: .medium))
-                            Text(action.title)
-                                .font(.system(size: 12, weight: idx == 0 ? .semibold : .regular))
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 11).padding(.vertical, 6)
-                        .background(
-                            idx == 0 && availability.actionsActive
-                                ? AnyShapeStyle(LinearGradient(colors: Theme.accentGradient,
-                                              startPoint: .topLeading, endPoint: .bottomTrailing))
-                                : AnyShapeStyle(Theme.pillInactive),
-                            in: Capsule())
-                        .foregroundStyle(idx == 0 && availability.actionsActive ? .white : Theme.textSecondary)
-                        .fixedSize()
-                    }
-                    .buttonStyle(.plain)
-                }
-                Spacer(minLength: 4)
-                Button { copy(selectedItem!) } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.top, 2)
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
-        }
     }
 
     /// Inline streaming result of a shelf-triggered AI action.
@@ -255,8 +205,8 @@ struct ShelfView: View {
                     .foregroundStyle(Theme.textPrimary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.panelBackground.opacity(0.85),
-                        in: RoundedRectangle(cornerRadius: Theme.panelRadius))
+            .background(Theme.panelBackground.opacity(0.9),
+                        in: NotchShape(progress: 1, menuBand: menuBand, neckDepth: neck))
             .allowsHitTesting(false)
         }
     }
@@ -302,7 +252,7 @@ struct ShelfView: View {
     /// Link clips in the current view, shown as a tappable bookmarks carousel
     /// above the clip carousel. Clicking one opens it in the default browser.
     private var bookmarkItems: [ClipItem] {
-        filtered.filter { $0.type == .link }
+        allItems.filter { $0.type == .link && $0.isBookmarked }
     }
 
     @ViewBuilder
@@ -373,8 +323,8 @@ struct ShelfView: View {
                     ForEach(filtered) { item in
                         CardView(
                             item: item,
-                            isSelected: selectedID == item.id || copiedID == item.id,
-                            onTap: { tapCard(item) },
+                            isSelected: copiedID == item.id,
+                            onTap: { openItem(item) },
                             onDoubleTap: { openItem(item) }
                         )
                         .frame(width: 130, height: 120)
@@ -389,11 +339,45 @@ struct ShelfView: View {
     @ViewBuilder
     private func contextMenu(for item: ClipItem) -> some View {
         Button { copy(item) } label: { Label("Copy", systemImage: "doc.on.doc") }
+
+        if item.type == .file {
+            Button { openItem(item) } label: {
+                Label(item.isFolder ? "Open Folder" : "Open File", systemImage: "arrow.up.forward.app")
+            }
+        }
+        if item.type == .link {
+            Button { openLink(item) } label: { Label("Open Link", systemImage: "safari") }
+            Button { toggleBookmark(item) } label: {
+                Label(item.isBookmarked ? "Remove from Bookmarks" : "Add to Bookmarks",
+                      systemImage: item.isBookmarked ? "bookmark.slash" : "bookmark")
+            }
+        }
+
         Button { toggleFavorite(item) } label: {
             Label(item.isPinned ? "Unfavorite" : "Favorite",
                   systemImage: item.isPinned ? "star.slash" : "star")
         }
+
+        // AI actions live here now (right-click), not on a single click.
+        let actions = aiActions(for: item)
+        if !actions.isEmpty {
+            Divider()
+            if availability.actionsActive {
+                Menu {
+                    ForEach(actions, id: \.id) { action in
+                        Button { runAI(action, on: item) } label: {
+                            Label(action.title, systemImage: action.systemImage)
+                        }
+                    }
+                } label: { Label("AI Actions", systemImage: "wand.and.stars") }
+            } else {
+                Button {} label: { Label("AI Actions — enable Apple Intelligence", systemImage: "lock.fill") }
+                    .disabled(true)
+            }
+        }
+
         if !categories.isEmpty {
+            Divider()
             Menu("Add to Category") {
                 ForEach(categories) { cat in
                     Button(cat.name) { item.categoryID = cat.id; try? modelContext.save() }
@@ -407,16 +391,6 @@ struct ShelfView: View {
         Divider()
         Button(role: .destructive) { storage.delete(item) } label: {
             Label("Delete", systemImage: "trash")
-        }
-    }
-
-    /// First tap selects (revealing the AI action bar); tapping the already-
-    /// selected card copies it.
-    private func tapCard(_ item: ClipItem) {
-        if selectedID == item.id {
-            copy(item)
-        } else {
-            withAnimation(.easeOut(duration: 0.15)) { selectedID = item.id }
         }
     }
 
@@ -454,13 +428,23 @@ struct ShelfView: View {
         try? modelContext.save()
     }
 
-    // MARK: - AI from the shelf
+    private func toggleBookmark(_ item: ClipItem) {
+        item.isBookmarked.toggle()
+        try? modelContext.save()
+    }
 
-    private func runAI(_ action: AIAction) {
-        guard let item = selectedItem else { return }
-        guard availability.actionsActive else { return }   // AI off → chips already locked
+    // MARK: - AI from the shelf (right-click → AI Actions)
+
+    private func aiActions(for item: ClipItem) -> [AIAction] {
+        guard !item.isSensitive else { return [] }
+        return AIActionCatalog.actions(for: item, destinationBundleID: nil)
+    }
+
+    private func runAI(_ action: AIAction, on item: ClipItem) {
+        guard availability.actionsActive else { return }
         let lang = action.requiresLanguageArg ? "Italian" : nil
         AIUsageTracker.record(actionID: action.id, type: item.type, destinationBundleID: nil)
+        aiItem = item
         aiAction = action
         aiText = ""
         aiError = nil
@@ -483,12 +467,13 @@ struct ShelfView: View {
         aiTask?.cancel()
         aiStreaming = false
         aiAction = nil
+        aiItem = nil
         aiText = ""
         aiError = nil
     }
 
     private func pasteAIResult() {
-        guard !aiText.isEmpty, let source = selectedItem else { return }
+        guard !aiText.isEmpty, let source = aiItem else { return }
         // Save a derived clip (original preserved) then paste.
         let derived = ClipItem(type: .text, textContent: aiText, sourceAppName: "AI",
                                sourceAppBundleID: source.sourceAppBundleID, byteSize: aiText.utf8.count)

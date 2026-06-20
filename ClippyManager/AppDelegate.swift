@@ -114,7 +114,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private func setupNotchDropZone() {
         let zone = NotchDropZone(
             onDragEnter: { [weak self] in
-                DispatchQueue.main.async { self?.openShelf() }
+                DispatchQueue.main.async {
+                    // Drag-opened → keep it open for the whole drag (don't let the
+                    // hover auto-close fire while the pointer is mid-drag).
+                    self?.shelfHoverActivated = false
+                    self?.openShelf()
+                }
             },
             onHover: { [weak self] in
                 DispatchQueue.main.async { self?.peekShelf() }
@@ -122,7 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             onDrop: { [weak self] pb in
                 guard let self else { return false }
                 let ok = DropIngestor.ingest(pasteboard: pb, into: self.storageManager)
-                if ok { self.openShelf() }   // reveal the freshly-saved item
+                if ok { self.shelfHoverActivated = false; self.openShelf() }
                 return ok
             }
         )
@@ -291,7 +296,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     private func makeShelfPanel() -> ShelfPanel {
-        let panel = ShelfPanel(contentRect: NSRect(x: 0, y: 0, width: 720, height: 320))
+        let panel = ShelfPanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 380))
         panel.appearance = NSAppearance(named: .darkAqua)
         let engine = aiEngine!
         let avail = aiAvailability!

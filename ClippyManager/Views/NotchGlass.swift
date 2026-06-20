@@ -11,12 +11,14 @@ struct NotchGlass: NSViewRepresentable {
     var width: CGFloat
     var height: CGFloat
     var menuBand: CGFloat
+    var neckDepth: CGFloat
     var openDuration: Double
     var closeDuration: Double
 
     func makeNSView(context: Context) -> NotchGlassNSView {
         let v = NotchGlassNSView()
         v.menuBand = menuBand
+        v.neckDepth = neckDepth
         v.frame = NSRect(x: 0, y: 0, width: width, height: height)
         v.apply(open: isOpen, animated: false, duration: 0)
         context.coordinator.lastOpen = isOpen
@@ -25,6 +27,7 @@ struct NotchGlass: NSViewRepresentable {
 
     func updateNSView(_ v: NotchGlassNSView, context: Context) {
         v.menuBand = menuBand
+        v.neckDepth = neckDepth
         if context.coordinator.lastOpen != isOpen {
             context.coordinator.lastOpen = isOpen
             v.apply(open: isOpen, animated: true,
@@ -41,6 +44,7 @@ final class NotchGlassNSView: NSView {
     private let veil = CALayer()
     private let maskLayer = CAShapeLayer()
     var menuBand: CGFloat = 34
+    var neckDepth: CGFloat = 70
     private var currentOpen = false
 
     override init(frame frameRect: NSRect) {
@@ -116,7 +120,7 @@ final class NotchGlassNSView: NSView {
     /// NotchShape path flipped into the layer's bottom-left coordinate space.
     private func flippedPath(progress: CGFloat) -> CGPath {
         let rect = CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
-        let p = NotchShape(progress: progress, menuBand: menuBand).path(in: rect).cgPath
+        let p = NotchShape(progress: progress, menuBand: menuBand, neckDepth: neckDepth).path(in: rect).cgPath
         var flip = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: bounds.height)
         return p.copy(using: &flip) ?? p
     }
