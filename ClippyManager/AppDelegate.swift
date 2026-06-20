@@ -259,6 +259,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         shelfCloseWork?.cancel()
         let panel = shelfPanel ?? makeShelfPanel()
         shelfPanel = panel
+        // Size the panel to its content before showing (bookmarks may have changed
+        // since it was last open) so it hugs the content with no dead space.
+        let h = ShelfMetrics.bodyHeight(hasBookmarks: storageManager.hasBookmarkedLinks())
+        panel.setContentSize(NSSize(width: ShelfMetrics.width, height: h))
         panel.positionUnderNotch()
         // Order front WITHOUT activating the app — activating switches Spaces and
         // makes the panel vanish over other apps' fullscreen windows. A
@@ -295,8 +299,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         DispatchQueue.main.asyncAfter(deadline: .now() + ShelfController.closeDuration + 0.02, execute: work)
     }
 
+    /// Resize the open shelf to fit its content (called when bookmarks appear or
+    /// disappear), keeping the top edge flush with the notch.
+    private func resizeShelf(to height: CGFloat) {
+        guard let panel = shelfPanel, let screen = NSScreen.main else { return }
+        guard abs(panel.frame.height - height) > 0.5 else { return }
+        let f = screen.frame
+        let w = ShelfMetrics.width
+        panel.setFrame(NSRect(x: f.midX - w / 2, y: f.maxY - height, width: w, height: height),
+                       display: true, animate: false)
+    }
+
     private func makeShelfPanel() -> ShelfPanel {
-        let panel = ShelfPanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 380))
+        let h = ShelfMetrics.bodyHeight(hasBookmarks: storageManager.hasBookmarkedLinks())
+        let panel = ShelfPanel(contentRect: NSRect(x: 0, y: 0, width: ShelfMetrics.width, height: h))
         panel.appearance = NSAppearance(named: .darkAqua)
         let engine = aiEngine!
         let avail = aiAvailability!
@@ -306,7 +322,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             controller: shelfController,
             onOpenLibrary: { [weak self] in self?.closeShelf(); self?.openLibrary() },
             onClose: { [weak self] in self?.closeShelf() },
-            shouldAutoCloseOnLeave: { [weak self] in self?.shelfHoverActivated ?? false }
+            shouldAutoCloseOnLeave: { [weak self] in self?.shelfHoverActivated ?? false },
+            onBodyHeightChange: { [weak self] height in self?.resizeShelf(to: height) }
         )
         .environment(storageManager)
         .modelContainer(container)

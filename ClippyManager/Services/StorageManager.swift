@@ -61,6 +61,13 @@ final class StorageManager {
         maxItems = max(10, min(2000, newMax))
     }
 
+    /// Whether any link is bookmarked — drives the shelf panel height.
+    func hasBookmarkedLinks() -> Bool {
+        var d = FetchDescriptor<ClipItem>(predicate: #Predicate { $0.isBookmarked })
+        d.fetchLimit = 1
+        return ((try? context.fetchCount(d)) ?? 0) > 0
+    }
+
     /// The N most recent clips (newest first). Used by ⌃⌘0–9.
     func recentItems(limit: Int) -> [ClipItem] {
         var d = FetchDescriptor<ClipItem>(

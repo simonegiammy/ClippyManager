@@ -2,6 +2,33 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
+/// Shelf layout metrics — static so AppDelegate can size the panel window to
+/// exactly match the content (hug it; no dead space).
+enum ShelfMetrics {
+    static let width: CGFloat = 560
+    static let menuBand: CGFloat = 34
+    static let neck: CGFloat = 44      // teardrop neck: enough to taper, not a big empty gap
+    static let cardRowHeight: CGFloat = 124
+
+    // Estimated (slightly generous) heights of the stacked rows.
+    static let topBarH: CGFloat = 28
+    static let tabsH: CGFloat = 36
+    static let bookmarksH: CGFloat = 54
+    static let vSpacing: CGFloat = 10
+    static let bottomPad: CGFloat = 14
+
+    /// Empty glass between the notch and the first row (the emerging "neck").
+    static var topInset: CGFloat { menuBand + neck + 6 }
+
+    /// Exact panel height for the current content — compact with no bookmarks,
+    /// taller when the bookmarks carousel is shown.
+    static func bodyHeight(hasBookmarks: Bool) -> CGFloat {
+        var h = topInset + topBarH + vSpacing + tabsH + vSpacing + cardRowHeight + bottomPad
+        if hasBookmarks { h += vSpacing + bookmarksH }
+        return h
+    }
+}
+
 /// The Supaste-style notch shelf: a dark glass horizontal panel with cards.
 struct ShelfView: View {
     @Environment(StorageManager.self) private var storage
@@ -30,16 +57,17 @@ struct ShelfView: View {
     var onOpenLibrary: () -> Void
     var onClose: () -> Void
     var shouldAutoCloseOnLeave: () -> Bool = { false }
+    /// Reports the height the panel should be (so AppDelegate can resize the
+    /// window when bookmarks appear/disappear).
+    var onBodyHeightChange: (CGFloat) -> Void = { _ in }
 
-    // Panel size — the menu band at top is where the notch pill lives, and the
-    // neck is the funnel the glass emerges through before reaching full width.
-    private let panelWidth: CGFloat = 560
-    private let panelHeight: CGFloat = 380
-    private let menuBand: CGFloat = 34
-    private let neck: CGFloat = 70
-    // Fixed height for the card carousel so an empty category and a full one are
-    // exactly the same height (no reflow glitch when switching tabs).
-    private let cardRowHeight: CGFloat = 124
+    private var panelWidth: CGFloat { ShelfMetrics.width }
+    private var menuBand: CGFloat { ShelfMetrics.menuBand }
+    private var neck: CGFloat { ShelfMetrics.neck }
+    private var cardRowHeight: CGFloat { ShelfMetrics.cardRowHeight }
+    private var hasBookmarks: Bool { !bookmarkItems.isEmpty }
+    /// Panel hugs its content: compact with no bookmarks, taller with them.
+    private var bodyHeight: CGFloat { ShelfMetrics.bodyHeight(hasBookmarks: hasBookmarks) }
 
     /// Horizontal fade applied to carousels so items dissolve at the left/right
     /// edges instead of being cut off sharply.
@@ -72,24 +100,25 @@ struct ShelfView: View {
             //    Core Animation (SwiftUI .clipShape can't mask an NSVisualEffectView,
             //    which left un-rounded black corners). It grows/retracts itself.
             NotchGlass(isOpen: controller.isOpen,
-                       width: panelWidth, height: panelHeight, menuBand: menuBand,
+                       width: panelWidth, height: bodyHeight, menuBand: menuBand,
                        neckDepth: neck,
                        openDuration: ShelfController.openDuration,
                        closeDuration: ShelfController.closeDuration)
-                .frame(width: panelWidth, height: panelHeight)
+                .frame(width: panelWidth, height: bodyHeight)
                 .overlay(
                     NotchShape(progress: growth, menuBand: menuBand, neckDepth: neck)
                         .stroke(Theme.accent, lineWidth: isDropTargeted ? 2.5 : 0)
                 )
 
             // 2. Content fades in only once the glass is nearly full, so tabs
-            //    never appear over a still-small panel.
+            //    never appear over a still-small panel. Pinned to the TOP so it
+            //    hugs the notch (no centered gap above the first row).
             content
-                .frame(width: panelWidth, height: panelHeight)
+                .frame(width: panelWidth, height: bodyHeight, alignment: .top)
                 .opacity(growth > 0.8 ? Double((growth - 0.8) / 0.2) : 0)
                 .allowsHitTesting(growth > 0.95)
         }
-        .frame(width: panelWidth, height: panelHeight)
+        .frame(width: panelWidth, height: bodyHeight, alignment: .top)
         .overlay(dropHint)
         .onDrop(of: [.image, .fileURL, .text, .plainText],
                 isTargeted: $isDropTargeted) { providers in
@@ -109,8 +138,10 @@ struct ShelfView: View {
         // the mouse away doesn't tear them down.
         .onChange(of: showAddCategory) { _, open in controller.keepOpen = open || aiAction != nil }
         .onChange(of: aiAction?.id) { _, _ in controller.keepOpen = showAddCategory || aiAction != nil }
-        .onAppear { syncGrowth(animated: true) }
+        .onAppear { syncGrowth(animated: true); onBodyHeightChange(bodyHeight) }
         .onChange(of: controller.isOpen) { _, _ in syncGrowth(animated: true) }
+        // Resize the window when the bookmarks carousel appears/disappears.
+        .onChange(of: hasBookmarks) { _, _ in onBodyHeightChange(bodyHeight) }
     }
 
     /// Animate the notch shape toward the controller's open state, using the
