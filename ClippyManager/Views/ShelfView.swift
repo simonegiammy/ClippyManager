@@ -38,7 +38,6 @@ struct ShelfView: View {
 
     @State private var filter = ClipFilter()
     @State private var showAddCategory = false
-    @State private var copiedID: UUID? = nil
     @State private var isDropTargeted = false
     @State private var leaveWork: DispatchWorkItem?
     @State private var growth: CGFloat = 0   // 0 closed (pill) → 1 open (panel)
@@ -236,9 +235,7 @@ struct ShelfView: View {
         if inside { return }
         // Near-instant on leave, with a tiny grace period only to tolerate the
         // pointer skimming the notch gap (matches NotchDock's snappy retract).
-        let work = DispatchWorkItem {
-            if copiedID == nil { onClose() }
-        }
+        let work = DispatchWorkItem { onClose() }
         leaveWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: work)
     }
@@ -374,12 +371,7 @@ struct ShelfView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(filtered) { item in
-                            CardView(
-                                item: item,
-                                isSelected: copiedID == item.id,
-                                onTap: { openItem(item) },
-                                onDoubleTap: { openItem(item) }
-                            )
+                            CardView(item: item, onTap: { openItem(item) })
                             .frame(width: 130, height: 120)
                             .contextMenu { contextMenu(for: item) }
                         }
@@ -451,21 +443,18 @@ struct ShelfView: View {
         }
     }
 
+    /// Copy a clip and close immediately — no highlight, no delay.
     private func copy(_ item: ClipItem) {
         PasteService.copy(item)
-        copiedID = item.id
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            if copiedID == item.id { onClose() }
-        }
+        onClose()
     }
 
-    /// Double-click: open files/folders in Finder, links in the browser; anything
-    /// else just copies (the classic behavior).
+    /// A single click acts right away: open files/folders in Finder, links in the
+    /// browser, images in the default viewer (Preview); text/code/colors copy.
     private func openItem(_ item: ClipItem) {
         switch item.type {
         case .file:
-            let paths = (item.textContent ?? "").components(separatedBy: "\n").filter { !$0.isEmpty }
-            for p in paths { NSWorkspace.shared.open(URL(fileURLWithPath: p)) }
+            for p in item.filePaths { NSWorkspace.shared.open(URL(fileURLWithPath: p)) }
             onClose()
         case .link:
             let raw = (item.sourceURL ?? item.textContent ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -475,7 +464,23 @@ struct ShelfView: View {
             } else {
                 copy(item)
             }
+        case .image, .screenshot:
+            openImage(item)
         default:
+            copy(item)
+        }
+    }
+
+    /// Write the stored image to a temp file and open it (Preview/default app).
+    private func openImage(_ item: ClipItem) {
+        guard let data = item.imageData else { copy(item); return }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(item.suggestedFileBaseName + ".png")
+        do {
+            try data.write(to: url)
+            NSWorkspace.shared.open(url)
+            onClose()
+        } catch {
             copy(item)
         }
     }

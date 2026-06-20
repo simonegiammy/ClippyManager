@@ -14,7 +14,9 @@ struct CardView: View {
     let item: ClipItem
     var isSelected: Bool = false
     var onTap: () -> Void
-    var onDoubleTap: () -> Void
+    /// Optional. When nil (e.g. the shelf), NO double-tap gesture is installed —
+    /// so SwiftUI doesn't wait to disambiguate and the single tap fires instantly.
+    var onDoubleTap: (() -> Void)? = nil
 
     @State private var isHovered = false
 
@@ -29,8 +31,8 @@ struct CardView: View {
         .background(isHovered ? Theme.cardBackgroundHover : Theme.cardBackground)
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous)
-                .stroke(isSelected ? Theme.selection : Theme.cardBorder,
-                        lineWidth: isSelected ? 2 : 1)
+                .stroke((isSelected || isHovered) ? Theme.selection : Theme.cardBorder,
+                        lineWidth: (isSelected || isHovered) ? 2 : 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
         .scaleEffect(isHovered ? 1.02 : 1.0)
@@ -39,10 +41,26 @@ struct CardView: View {
         .animation(.easeOut(duration: 0.12), value: isHovered)
         .animation(.easeOut(duration: 0.12), value: isSelected)
         .contentShape(Rectangle())
-        .onTapGesture(count: 2) { onDoubleTap() }
-        .onTapGesture { onTap() }
+        .modifier(TapBehavior(onTap: onTap, onDoubleTap: onDoubleTap))
         .onDrag { dragProvider() }
         .help(item.title)
+    }
+
+    /// Installs a double-tap gesture only when `onDoubleTap` is provided — so
+    /// surfaces that don't need it (the shelf) get an instant single tap with no
+    /// disambiguation delay.
+    private struct TapBehavior: ViewModifier {
+        let onTap: () -> Void
+        let onDoubleTap: (() -> Void)?
+        func body(content: Content) -> some View {
+            if let onDoubleTap {
+                content
+                    .onTapGesture(count: 2) { onDoubleTap() }
+                    .onTapGesture { onTap() }
+            } else {
+                content.onTapGesture { onTap() }
+            }
+        }
     }
 
     // MARK: - Preview area
