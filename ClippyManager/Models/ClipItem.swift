@@ -21,6 +21,7 @@ final class ClipItem {
     var isSensitive: Bool = false
     var categoryID: UUID?       // assigned custom category
     var isBookmarked: Bool = false   // link explicitly saved to the bookmarks carousel
+    var originalName: String?        // original filename of a dropped image (drag-out naming)
 
     init(
         type: ClipItemType,
@@ -128,5 +129,17 @@ final class ClipItem {
     var fileIcon: NSImage? {
         guard type == .file, let first = filePaths.first else { return nil }
         return NSWorkspace.shared.icon(forFile: first)
+    }
+
+    /// Base filename (no extension) to suggest when an image clip is dragged out
+    /// to the Finder — so it lands with a real name instead of a generic one.
+    var suggestedFileBaseName: String {
+        if let n = originalName, !n.isEmpty {
+            return (n as NSString).deletingPathExtension
+        }
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
+        let stamp = f.string(from: createdAt)
+        return (type == .screenshot ? "Screenshot " : "Image ") + stamp
     }
 }

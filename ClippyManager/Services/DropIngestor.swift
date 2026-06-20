@@ -55,6 +55,10 @@ enum DropIngestor {
     @MainActor
     @discardableResult
     static func ingest(pasteboard pb: NSPasteboard, into storage: StorageManager) -> Bool {
+        // 0. A drag that originated from the shelf itself → ignore (no duplicate).
+        if pb.types?.contains(where: { $0.rawValue == ClipDragMarker.typeID }) == true {
+            return false
+        }
         // 1. File URLs (files & folders)
         if let urls = pb.readObjects(forClasses: [NSURL.self],
                                      options: [.urlReadingFileURLsOnly: true]) as? [URL],
@@ -91,8 +95,10 @@ enum DropIngestor {
            let image = NSImage(contentsOf: url),
            let tiff = image.tiffRepresentation,
            let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
-            storage.add(ClipItem(type: .image, imageData: png,
-                                 sourceAppName: "Dropped", byteSize: png.count))
+            let clip = ClipItem(type: .image, imageData: png,
+                                sourceAppName: "Dropped", byteSize: png.count)
+            clip.originalName = url.lastPathComponent   // keep the name for drag-out
+            storage.add(clip)
         } else {
             storage.add(ClipItem(type: .file, textContent: url.path,
                                  sourceAppName: "Dropped", byteSize: size))

@@ -37,6 +37,20 @@ struct ShelfView: View {
     private let panelHeight: CGFloat = 380
     private let menuBand: CGFloat = 34
     private let neck: CGFloat = 70
+    // Fixed height for the card carousel so an empty category and a full one are
+    // exactly the same height (no reflow glitch when switching tabs).
+    private let cardRowHeight: CGFloat = 124
+
+    /// Horizontal fade applied to carousels so items dissolve at the left/right
+    /// edges instead of being cut off sharply.
+    private var carouselFade: LinearGradient {
+        LinearGradient(stops: [
+            .init(color: .clear, location: 0.0),
+            .init(color: .black, location: 0.05),
+            .init(color: .black, location: 0.95),
+            .init(color: .clear, location: 1.0),
+        ], startPoint: .leading, endPoint: .trailing)
+    }
 
     private var filtered: [ClipItem] {
         filter.apply(to: allItems, categories: categories)
@@ -79,7 +93,12 @@ struct ShelfView: View {
         .overlay(dropHint)
         .onDrop(of: [.image, .fileURL, .text, .plainText],
                 isTargeted: $isDropTargeted) { providers in
-            DropIngestor.ingest(providers: providers, into: storage)
+            // Ignore drags that originated from the shelf itself — dragging a
+            // card out and dropping it back must not duplicate it.
+            if providers.contains(where: { $0.registeredTypeIdentifiers.contains(ClipDragMarker.typeID) }) {
+                return false
+            }
+            return DropIngestor.ingest(providers: providers, into: storage)
         }
         .onHover { inside in handleHover(inside) }
         .environment(\.colorScheme, .dark)
@@ -283,7 +302,9 @@ struct ShelfView: View {
                         }
                     }
                     .padding(.vertical, 1)
+                    .padding(.horizontal, 2)
                 }
+                .mask(carouselFade)
             }
         }
     }
@@ -306,34 +327,39 @@ struct ShelfView: View {
 
     @ViewBuilder
     private var cards: some View {
-        if filtered.isEmpty {
-            VStack(spacing: 8) {
-                Image(systemName: storage.isCapturePaused ? "pause.circle" : "tray")
-                    .font(.system(size: 26))
-                    .foregroundStyle(Theme.textTertiary)
-                Text(storage.isCapturePaused ? "Capture paused" :
-                        (filter.search.isEmpty ? "Nothing here yet" : "No results"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.textTertiary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(filtered) { item in
-                        CardView(
-                            item: item,
-                            isSelected: copiedID == item.id,
-                            onTap: { openItem(item) },
-                            onDoubleTap: { openItem(item) }
-                        )
-                        .frame(width: 130, height: 120)
-                        .contextMenu { contextMenu(for: item) }
-                    }
+        Group {
+            if filtered.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: storage.isCapturePaused ? "pause.circle" : "tray")
+                        .font(.system(size: 26))
+                        .foregroundStyle(Theme.textTertiary)
+                    Text(storage.isCapturePaused ? "Capture paused" :
+                            (filter.search.isEmpty ? "Nothing here yet" : "No results"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textTertiary)
                 }
-                .padding(.vertical, 2)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(filtered) { item in
+                            CardView(
+                                item: item,
+                                isSelected: copiedID == item.id,
+                                onTap: { openItem(item) },
+                                onDoubleTap: { openItem(item) }
+                            )
+                            .frame(width: 130, height: 120)
+                            .contextMenu { contextMenu(for: item) }
+                        }
+                    }
+                    .padding(.vertical, 2)
+                    .padding(.horizontal, 2)
+                }
+                .mask(carouselFade)
             }
         }
+        .frame(height: cardRowHeight)   // empty == full → no height jump
     }
 
     @ViewBuilder

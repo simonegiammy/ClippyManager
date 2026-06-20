@@ -2,6 +2,12 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
+/// Private drag type stamped on clips dragged FROM the shelf, so a drag that's
+/// dropped back onto the shelf can be recognised and ignored (no duplicate).
+enum ClipDragMarker {
+    static let typeID = "com.giammy.clippymanager.clip"
+}
+
 /// A single clipboard item rendered as a Supaste-style card:
 /// content preview on top, source-app badge + timestamp + size on the bottom.
 struct CardView: View {
@@ -244,14 +250,35 @@ struct CardView: View {
     // MARK: - Drag out
 
     private func dragProvider() -> NSItemProvider {
-        if let img = item.nsImage {
-            return NSItemProvider(object: img)
-        }
-        if item.type == .file, let paths = item.textContent {
-            let first = paths.components(separatedBy: "\n").first ?? paths
+        let provider: NSItemProvider
+
+        if item.type == .file, let first = item.filePaths.first {
+            // Real file/folder: hand over the URL so Finder copies it with its
+            // real name.
             let url = URL(fileURLWithPath: first)
-            return NSItemProvider(contentsOf: url) ?? NSItemProvider(object: first as NSString)
+            provider = NSItemProvider(contentsOf: url) ?? NSItemProvider(object: first as NSString)
+        } else if (item.type == .image || item.type == .screenshot), let data = item.imageData {
+            // Image: register the stored PNG with a real suggested filename so the
+            // dropped file isn't named generically.
+            provider = NSItemProvider()
+            provider.suggestedName = item.suggestedFileBaseName
+            provider.registerDataRepresentation(forTypeIdentifier: UTType.png.identifier,
+                                                 visibility: .all) { completion in
+                completion(data, nil)
+                return nil
+            }
+        } else {
+            provider = NSItemProvider(object: (item.textContent ?? "") as NSString)
         }
-        return NSItemProvider(object: (item.textContent ?? "") as NSString)
+
+        // Stamp a private marker (own-process only) so a drop back onto the shelf
+        // is recognised and ignored — dragging an item out and back in no longer
+        // duplicates it.
+        provider.registerDataRepresentation(forTypeIdentifier: ClipDragMarker.typeID,
+                                            visibility: .ownProcess) { completion in
+            completion(Data(), nil)
+            return nil
+        }
+        return provider
     }
 }
